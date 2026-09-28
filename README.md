@@ -1,13 +1,20 @@
 # 🏦 Sistema Bancário em Java
 
-![Java 17](https://img.shields.io/badge/Java-17-ED8B00?style=flat-square&logo=openjdk&logoColor=white)
-![Maven](https://img.shields.io/badge/Maven-build-C71A36?style=flat-square&logo=apachemaven&logoColor=white)
-![JUnit 5](https://img.shields.io/badge/JUnit-5-25A162?style=flat-square&logo=junit5&logoColor=white)
-![Status](https://img.shields.io/badge/status-funcional-2ea44f?style=flat-square)
+![Banner do projeto Sistema Bancário em Java, desenvolvido com Java 17, Maven e JUnit 5](assets/sistema-bancario-banner.png)
 
-Aplicação de linha de comando que simula operações bancárias com contas corrente e
-poupança. O projeto aplica fundamentos de Java, orientação a objetos, validações de regras de
-negócio e testes unitários.
+<p align="center">
+  <img alt="Java 17" src="https://img.shields.io/badge/Java-17-ED8B00?style=flat-square&logo=openjdk&logoColor=white">
+  <img alt="Maven" src="https://img.shields.io/badge/Maven-build-C71A36?style=flat-square&logo=apachemaven&logoColor=white">
+  <img alt="JUnit 5" src="https://img.shields.io/badge/JUnit-5-25A162?style=flat-square&logo=junit5&logoColor=white">
+  <img alt="28 testes aprovados" src="https://img.shields.io/badge/testes-28%20aprovados-2ea44f?style=flat-square">
+</p>
+
+**Sistema Bancário em Java** é uma aplicação de linha de comando que simula operações com contas
+corrente e poupança. O projeto aplica fundamentos de Java, orientação a objetos, validações de
+regras de negócio e testes unitários.
+
+[Explore o código](src/main/java/com/github/amandadamata/sistemabancario/) ·
+[Veja os testes](src/test/java/com/github/amandadamata/sistemabancario/)
 
 ## 📌 Sobre o projeto
 
@@ -62,6 +69,8 @@ tratamento de operações inválidas e na verificação das regras de negócio.
 │       ├── BancoTest.java
 │       ├── ClienteTest.java
 │       └── ContaTest.java
+├── assets/
+│   └── sistema-bancario-banner.png
 ├── pom.xml
 └── README.md
 ```
