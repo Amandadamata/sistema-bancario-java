@@ -1,17 +1,45 @@
 package com.github.amandadamata.sistemabancario;
 
+import java.io.InputStream;
+import java.io.PrintStream;
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Locale;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.Scanner;
 
+/**
+ * Interface de linha de comando.
+ *
+ * <p>Toda regra de negócio fica nas classes de domínio; esta classe apenas lê entradas, chama
+ * as operações e exibe os resultados. A entrada e a saída são recebidas no construtor para que
+ * o fluxo do menu possa ser testado sem digitar no terminal.
+ */
 public class Main {
 
-    private static final Scanner scanner = new Scanner(System.in);
-    private static final Banco banco = new Banco();
+    private static final DateTimeFormatter FORMATO_DATA =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+
+    private final Banco banco;
+    private final Scanner scanner;
+    private final PrintStream saida;
+
+    Main(Banco banco, InputStream entrada, PrintStream saida) {
+        this.banco = banco;
+        this.scanner = new Scanner(entrada, StandardCharsets.UTF_8);
+        this.saida = saida;
+    }
 
     public static void main(String[] args) {
-        System.out.println("=== SISTEMA BANCÁRIO ===\n");
+        PrintStream saida = new PrintStream(System.out, true, StandardCharsets.UTF_8);
+        new Main(new Banco(Clock.systemDefaultZone()), System.in, saida).executar();
+    }
+
+    void executar() {
+        saida.println("=== SISTEMA BANCÁRIO ===\n");
 
         try {
             int opcao;
@@ -27,212 +55,225 @@ public class Main {
                     case 5 -> exibirExtrato();
                     case 6 -> listarContas();
                     case 7 -> aplicarRendimentoPoupanca();
-                    case 0 -> System.out.println("Encerrando o sistema. Até logo!");
-                    default -> System.out.println("Opção inválida. Tente novamente.\n");
+                    case 0 -> saida.println("Encerrando o sistema. Até logo!");
+                    default -> saida.println("Opção inválida. Tente novamente.\n");
                 }
             } while (opcao != 0);
         } catch (NoSuchElementException e) {
-            System.out.println("\nEntrada encerrada. Encerrando o sistema com segurança.");
-        } finally {
-            scanner.close();
+            saida.println("\nEntrada encerrada. Encerrando o sistema com segurança.");
         }
     }
 
-    private static void exibirMenu() {
-        System.out.println("------------ MENU ------------");
-        System.out.println("1 - Criar conta");
-        System.out.println("2 - Depositar");
-        System.out.println("3 - Sacar");
-        System.out.println("4 - Transferir");
-        System.out.println("5 - Ver extrato");
-        System.out.println("6 - Listar contas");
-        System.out.println("7 - Aplicar rendimento (poupança)");
-        System.out.println("0 - Sair");
-        System.out.println("-------------------------------");
+    private void exibirMenu() {
+        saida.println("------------ MENU ------------");
+        saida.println("1 - Criar conta");
+        saida.println("2 - Depositar");
+        saida.println("3 - Sacar");
+        saida.println("4 - Transferir");
+        saida.println("5 - Ver extrato");
+        saida.println("6 - Listar contas");
+        saida.println("7 - Aplicar rendimento mensal (poupança)");
+        saida.println("0 - Sair");
+        saida.println("-------------------------------");
     }
 
-    private static void criarConta() {
+    private void criarConta() {
         String nome = lerTextoObrigatorio("Nome do titular: ");
         String cpf = lerTextoObrigatorio("CPF do titular: ");
         Cliente cliente = new Cliente(nome, cpf);
 
-        System.out.println("Tipo de conta: 1 - Corrente | 2 - Poupança");
+        saida.println("Tipo de conta: 1 - Corrente | 2 - Poupança");
         int tipo;
         do {
             tipo = lerInteiro("Escolha: ");
             if (tipo != 1 && tipo != 2) {
-                System.out.println("Tipo inválido. Digite 1 para Corrente ou 2 para Poupança.");
+                saida.println("Tipo inválido. Digite 1 para Corrente ou 2 para Poupança.");
             }
         } while (tipo != 1 && tipo != 2);
 
         Conta conta;
         if (tipo == 1) {
-            double limite;
-            do {
-                limite = lerDouble("Limite do cheque especial: R$ ");
-                if (limite < 0) {
-                    System.out.println("O limite do cheque especial não pode ser negativo.");
-                }
-            } while (limite < 0);
-            conta = new ContaCorrente(cliente, limite);
+            BigDecimal limite = lerValor("Limite do cheque especial: R$ ");
+            conta = banco.abrirContaCorrente(cliente, limite);
         } else {
-            conta = new ContaPoupanca(cliente);
+            conta = banco.abrirContaPoupanca(cliente);
         }
 
-        banco.adicionarConta(conta);
-        System.out.println("Conta criada com sucesso! Número: " + conta.getNumero()
+        saida.println("Conta criada com sucesso! Número: " + conta.getNumero()
                 + " (" + conta.getTipoConta() + ")\n");
     }
 
-    private static void depositar() {
-        Conta conta = buscarContaPorNumeroInformado();
-        if (conta == null) {
+    private void depositar() {
+        Optional<Conta> conta = buscarContaPorNumeroInformado();
+        if (conta.isEmpty()) {
             return;
         }
 
-        double valor = lerDouble("Valor do depósito: R$ ");
+        BigDecimal valor = lerValor("Valor do depósito: R$ ");
         try {
-            conta.depositar(valor);
-            System.out.println("Depósito realizado com sucesso!\n");
+            conta.get().depositar(valor);
+            saida.println("Depósito realizado com sucesso!\n");
         } catch (IllegalArgumentException e) {
-            System.out.println("Erro: " + e.getMessage() + "\n");
+            saida.println("Erro: " + e.getMessage() + "\n");
         }
     }
 
-    private static void sacar() {
-        Conta conta = buscarContaPorNumeroInformado();
-        if (conta == null) {
+    private void sacar() {
+        Optional<Conta> conta = buscarContaPorNumeroInformado();
+        if (conta.isEmpty()) {
             return;
         }
 
-        double valor = lerDouble("Valor do saque: R$ ");
+        BigDecimal valor = lerValor("Valor do saque: R$ ");
         try {
-            conta.sacar(valor);
-            System.out.println("Saque realizado com sucesso!\n");
+            conta.get().sacar(valor);
+            saida.println("Saque realizado com sucesso!\n");
         } catch (SaldoInsuficienteException | IllegalArgumentException e) {
-            System.out.println("Erro: " + e.getMessage() + "\n");
+            saida.println("Erro: " + e.getMessage() + "\n");
         }
     }
 
-    private static void transferir() {
-        System.out.println("Conta de ORIGEM:");
-        Conta origem = buscarContaPorNumeroInformado();
-        if (origem == null) {
+    private void transferir() {
+        saida.println("Conta de ORIGEM:");
+        Optional<Conta> origem = buscarContaPorNumeroInformado();
+        if (origem.isEmpty()) {
             return;
         }
 
-        System.out.println("Conta de DESTINO:");
-        Conta destino = buscarContaPorNumeroInformado();
-        if (destino == null) {
+        saida.println("Conta de DESTINO:");
+        Optional<Conta> destino = buscarContaPorNumeroInformado();
+        if (destino.isEmpty()) {
             return;
         }
 
-        if (origem == destino) {
-            System.out.println("Não é possível transferir para a mesma conta.\n");
-            return;
-        }
-
-        double valor = lerDouble("Valor da transferência: R$ ");
+        BigDecimal valor = lerValor("Valor da transferência: R$ ");
         try {
-            origem.transferir(destino, valor);
-            System.out.println("Transferência realizada com sucesso!\n");
+            origem.get().transferir(destino.get(), valor);
+            saida.println("Transferência realizada com sucesso!\n");
         } catch (SaldoInsuficienteException | IllegalArgumentException e) {
-            System.out.println("Erro: " + e.getMessage() + "\n");
+            saida.println("Erro: " + e.getMessage() + "\n");
         }
     }
 
-    private static void exibirExtrato() {
-        Conta conta = buscarContaPorNumeroInformado();
-        if (conta != null) {
-            conta.exibirExtrato();
+    private void exibirExtrato() {
+        Optional<Conta> encontrada = buscarContaPorNumeroInformado();
+        if (encontrada.isEmpty()) {
+            return;
         }
+
+        Conta conta = encontrada.get();
+        saida.println("\n===== EXTRATO — Conta " + conta.getNumero() + " (" + conta.getTipoConta()
+                + ") — Titular: " + conta.getTitular().getNome() + " =====");
+        List<Transacao> historico = conta.getHistorico();
+        if (historico.isEmpty()) {
+            saida.println("Nenhuma movimentação registrada ainda.");
+        }
+        for (Transacao transacao : historico) {
+            saida.println(formatarTransacao(transacao));
+        }
+        saida.println("Saldo atual: " + Moeda.formatar(conta.getSaldo()));
+        if (conta instanceof ContaCorrente corrente) {
+            saida.println("Limite do cheque especial: "
+                    + Moeda.formatar(corrente.getLimiteChequeEspecial())
+                    + " | Disponível: " + Moeda.formatar(conta.getSaldoDisponivel()));
+        }
+        saida.println("=================================================\n");
     }
 
-    private static void listarContas() {
-        System.out.println("\n===== CONTAS CADASTRADAS =====");
+    private String formatarTransacao(Transacao transacao) {
+        String descricao = transacao.tipo().getDescricao();
+        if (transacao.contaRelacionada().isPresent()) {
+            String preposicao = transacao.tipo().isCredito() ? "da" : "para a";
+            descricao += " (" + preposicao + " conta " + transacao.contaRelacionada().getAsInt() + ")";
+        }
+        String sinal = transacao.tipo().isCredito() ? "+" : "-";
+        return String.format("[%s] %-38s %s%s | Saldo após: %s",
+                transacao.dataHora().format(FORMATO_DATA),
+                descricao,
+                sinal,
+                Moeda.formatar(transacao.valor()),
+                Moeda.formatar(transacao.saldoResultante()));
+    }
+
+    private void listarContas() {
+        saida.println("\n===== CONTAS CADASTRADAS =====");
         List<Conta> contas = banco.listarContas();
         if (contas.isEmpty()) {
-            System.out.println("Nenhuma conta cadastrada.");
+            saida.println("Nenhuma conta cadastrada.");
         }
         for (Conta conta : contas) {
-            System.out.printf(Locale.US, "Nº %d | %-14s | Titular: %-20s | Saldo: R$ %.2f%n",
+            saida.printf("Nº %d | %-14s | Titular: %-20s | Saldo: %s%n",
                     conta.getNumero(), conta.getTipoConta(), conta.getTitular().getNome(),
-                    conta.getSaldo());
+                    Moeda.formatar(conta.getSaldo()));
         }
-        System.out.println();
+        saida.println();
     }
 
-    private static void aplicarRendimentoPoupanca() {
-        Conta conta = buscarContaPorNumeroInformado();
-        if (conta == null) {
+    private void aplicarRendimentoPoupanca() {
+        Optional<Conta> conta = buscarContaPorNumeroInformado();
+        if (conta.isEmpty()) {
             return;
         }
 
-        if (conta instanceof ContaPoupanca poupanca) {
-            try {
-                double rendimento = poupanca.aplicarRendimento();
-                if (rendimento > 0) {
-                    System.out.printf(Locale.US,
-                            "Rendimento de R$ %.2f aplicado à conta %d (Poupança).%n%n",
-                            rendimento, poupanca.getNumero());
-                } else {
-                    System.out.println("A conta não possui saldo positivo para rendimento.\n");
-                }
-            } catch (IllegalArgumentException e) {
-                System.out.println("Erro: " + e.getMessage() + "\n");
+        if (!(conta.get() instanceof ContaPoupanca poupanca)) {
+            saida.println("Essa operação só está disponível para contas poupança.\n");
+            return;
+        }
+
+        try {
+            BigDecimal rendimento = poupanca.aplicarRendimento();
+            if (rendimento.signum() > 0) {
+                saida.println("Rendimento de " + Moeda.formatar(rendimento)
+                        + " aplicado à conta " + poupanca.getNumero() + ".\n");
+            } else {
+                saida.println("O saldo atual não gera rendimento de pelo menos R$ 0,01.\n");
             }
-        } else {
-            System.out.println("Essa operação só está disponível para contas poupança.\n");
+        } catch (IllegalStateException e) {
+            saida.println("Erro: " + e.getMessage() + "\n");
         }
     }
 
-    private static Conta buscarContaPorNumeroInformado() {
+    private Optional<Conta> buscarContaPorNumeroInformado() {
         int numero = lerInteiro("Número da conta: ");
-        Conta conta = banco.buscarContaPorNumero(numero);
-        if (conta == null) {
-            System.out.println("Conta não encontrada.\n");
+        Optional<Conta> conta = banco.buscarContaPorNumero(numero);
+        if (conta.isEmpty()) {
+            saida.println("Conta não encontrada.\n");
         }
         return conta;
     }
 
-    private static int lerInteiro(String mensagem) {
-        System.out.print(mensagem);
+    private int lerInteiro(String mensagem) {
+        saida.print(mensagem);
         while (true) {
             String entrada = scanner.nextLine().trim();
             try {
                 return Integer.parseInt(entrada);
             } catch (NumberFormatException e) {
-                System.out.print("Entrada inválida. Digite um número inteiro: ");
+                saida.print("Entrada inválida. Digite um número inteiro: ");
             }
         }
     }
 
-    private static double lerDouble(String mensagem) {
-        System.out.print(mensagem);
+    /** Lê um valor monetário. A validação de regra de negócio (ex: positivo) fica no domínio. */
+    private BigDecimal lerValor(String mensagem) {
+        saida.print(mensagem);
         while (true) {
-            String entrada = scanner.nextLine().trim();
             try {
-                double valor = Double.parseDouble(entrada);
-                if (Double.isFinite(valor)) {
-                    return valor;
-                }
-            } catch (NumberFormatException e) {
-                System.out.print("Entrada inválida. Digite um número (ex: 100.50): ");
-                continue;
+                return Moeda.converter(scanner.nextLine());
+            } catch (IllegalArgumentException e) {
+                saida.print(e.getMessage() + " Tente novamente: ");
             }
-
-            System.out.print("Entrada inválida. Digite um número finito (ex: 100.50): ");
         }
     }
 
-    private static String lerTextoObrigatorio(String mensagem) {
+    private String lerTextoObrigatorio(String mensagem) {
         while (true) {
-            System.out.print(mensagem);
+            saida.print(mensagem);
             String valor = scanner.nextLine().trim();
             if (!valor.isEmpty()) {
                 return valor;
             }
-            System.out.println("Este campo é obrigatório. Digite um valor.");
+            saida.println("Este campo é obrigatório. Digite um valor.");
         }
     }
 }

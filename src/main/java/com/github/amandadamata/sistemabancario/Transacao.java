@@ -1,30 +1,36 @@
 package com.github.amandadamata.sistemabancario;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Locale;
 import java.util.Objects;
+import java.util.OptionalInt;
 
-final class Transacao {
+/**
+ * Movimentação imutável do extrato.
+ *
+ * @param tipo            natureza da movimentação
+ * @param valor           valor sempre positivo; o sinal é definido pelo tipo
+ * @param saldoResultante saldo da conta logo após a movimentação
+ * @param dataHora        momento em que a movimentação foi registrada
+ * @param contaRelacionada número da outra conta em transferências, quando houver
+ */
+public record Transacao(
+        TipoTransacao tipo,
+        BigDecimal valor,
+        BigDecimal saldoResultante,
+        LocalDateTime dataHora,
+        OptionalInt contaRelacionada) {
 
-    private static final DateTimeFormatter FORMATO_DATA =
-            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
-
-    private final String descricao;
-    private final double valor;
-    private final double saldoResultante;
-    private final LocalDateTime dataHora;
-
-    Transacao(String descricao, double valor, double saldoResultante) {
-        this.descricao = Objects.requireNonNull(descricao, "A descrição é obrigatória.");
-        this.valor = valor;
-        this.saldoResultante = saldoResultante;
-        this.dataHora = LocalDateTime.now();
+    public Transacao {
+        Objects.requireNonNull(tipo, "O tipo é obrigatório.");
+        Objects.requireNonNull(valor, "O valor é obrigatório.");
+        Objects.requireNonNull(saldoResultante, "O saldo resultante é obrigatório.");
+        Objects.requireNonNull(dataHora, "A data e hora são obrigatórias.");
+        Objects.requireNonNull(contaRelacionada, "Use OptionalInt.empty() quando não houver conta.");
     }
 
-    @Override
-    public String toString() {
-        return String.format(Locale.US, "[%s] %-30s R$ %10.2f | Saldo após: R$ %.2f",
-                dataHora.format(FORMATO_DATA), descricao, valor, saldoResultante);
+    /** Valor com sinal: positivo para créditos e negativo para débitos. */
+    public BigDecimal valorComSinal() {
+        return tipo.isCredito() ? valor : valor.negate();
     }
 }
