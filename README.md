@@ -1,105 +1,178 @@
-# 🏦 Sistema Bancário em Java
+# Banking System in Java
 
-![Banner do projeto Sistema Bancário em Java, desenvolvido com Java 17, Maven e JUnit 5](assets/sistema-bancario-banner.png)
+[![Java CI](https://github.com/Amandadamata/sistema-bancario-java/actions/workflows/ci.yml/badge.svg)](https://github.com/Amandadamata/sistema-bancario-java/actions/workflows/ci.yml)
 
-<p align="center">
-  <img alt="Java 17" src="https://img.shields.io/badge/Java-17-ED8B00?style=flat-square&logo=openjdk&logoColor=white">
-  <img alt="Maven" src="https://img.shields.io/badge/Maven-build-C71A36?style=flat-square&logo=apachemaven&logoColor=white">
-  <img alt="JUnit 5" src="https://img.shields.io/badge/JUnit-5-25A162?style=flat-square&logo=junit5&logoColor=white">
-  <img alt="28 testes aprovados" src="https://img.shields.io/badge/testes-28%20aprovados-2ea44f?style=flat-square">
-</p>
+**English** · [Português (Brasil)](README.pt-BR.md)
 
-**Sistema Bancário em Java** é uma aplicação de linha de comando que simula operações com contas
-corrente e poupança. O projeto aplica fundamentos de Java, orientação a objetos, validações de
-regras de negócio e testes unitários.
+A command-line banking application that models checking and savings accounts with exact money
+arithmetic, overdraft limits, transfers, monthly savings yield, and a typed transaction statement.
+It is a Java fundamentals project focused on object-oriented design, business rules, and tests.
 
-[Explore o código](src/main/java/com/github/amandadamata/sistemabancario/) ·
-[Veja os testes](src/test/java/com/github/amandadamata/sistemabancario/)
+## Problem it solves
 
-## 📌 Sobre o projeto
+Banking rules are a good test of correctness: money must never be lost to rounding, a failed
+transfer must leave both accounts unchanged, and every movement must be traceable. This project
+implements those rules in plain Java and verifies them with automated tests.
 
-Desenvolvido como projeto de estudo e portfólio, o sistema permite criar contas e realizar
-operações bancárias pelo terminal. A implementação concentra-se na modelagem das entidades, no
-tratamento de operações inválidas e na verificação das regras de negócio.
+## Features
 
-## ✨ Funcionalidades
+- Open checking accounts (with an overdraft limit) and savings accounts
+- Deposits, withdrawals, and transfers between accounts, including overdraft use
+- Exact monetary values with `BigDecimal` (two decimal places, explicit rounding)
+- Monthly savings yield of 0.5%, applied at most once per calendar month
+- Statement with type, signed amount, resulting balance, timestamp, and related account
+- Brazilian number input and output (`100,50` or `100.50` in; `R$ 1.234,56` out)
+- Interactive menu that recovers from invalid input
 
-- Cadastro de contas corrente e poupança
-- Depósitos e saques com validação de valores
-- Transferências entre contas
-- Consulta de extrato com data, hora e saldo após cada operação
-- Listagem de contas e saldos
-- Uso de cheque especial em conta corrente
-- Aplicação de rendimento de 0,5% em conta poupança
-- Menu interativo com tratamento de entradas inválidas
+## Technologies
 
-## 🛠️ Tecnologias e conceitos aplicados
+- Java 17 (also verified on Java 21 in CI)
+- Maven with the Maven Wrapper
+- JUnit 5
+- GitHub Actions
 
-### Tecnologias
+## Architecture
 
-- **Java 17** como linguagem principal
-- **Maven** para automação de build e gerenciamento de dependências
-- **JUnit 5** para testes automatizados
-- **Git e GitHub** para versionamento e publicação do código
+All classes live in one package, `com.github.amandadamata.sistemabancario`. Code identifiers are in
+Portuguese because the project models Brazilian banking terms; this documentation is in English.
 
-### Conceitos
+| Class | Responsibility |
+|---|---|
+| `Banco` (Bank) | Opens accounts, owns account numbering, finds accounts by number |
+| `Conta` (Account) | Abstract base: balance, deposits, withdrawals, transfers, history |
+| `ContaCorrente` (Checking) | Overrides the available balance to include the overdraft limit |
+| `ContaPoupanca` (Savings) | Adds the monthly yield rule |
+| `Transacao` / `TipoTransacao` | Immutable statement entry and its credit/debit type |
+| `Moeda` (Money) | Money parsing, validation, rounding, and `R$` formatting |
+| `Cliente` (Customer) | Account holder with required name and CPF |
+| `Main` | Console menu only; no business rules |
 
-- Programação orientada a objetos
-- Encapsulamento, abstração, herança e polimorfismo
-- Coleções com `List` e `ArrayList`
-- Exceção personalizada e tratamento de erros
-- Validação de dados de entrada e regras de negócio
-- Testes unitários e parametrizados
+Design decisions:
 
-## 📁 Estrutura do projeto
+- **`BigDecimal` instead of `double`.** `double` stores binary fractions, so `0.1 + 0.2` becomes
+  `0.30000000000000004`. `BigDecimal` keeps exact decimal values. Amounts with more than two
+  decimal places are rejected instead of silently rounded.
+- **Banker's rounding (`HALF_EVEN`)** is used only where a value is calculated (the yield): a tie
+  such as `5.025` rounds to the even cent, `5.02`, which avoids a systematic upward bias.
+- **Polymorphism for the overdraft.** `Conta` asks `calcularSaldoDisponivel()` how much can be
+  spent; `ContaCorrente` overrides it to add the limit. Withdrawal and transfer code is shared.
+- **Validate first, then change state.** A transfer checks the destination, the amount, and the
+  available balance before touching either balance, so a rejected transfer changes nothing.
+- **Injected `Clock`.** Timestamps and the "once per month" yield rule depend on time; tests use
+  a controllable clock instead of the real date.
+- **Numbering per `Banco` instance.** Each bank keeps its own sequence starting at 1000, and a
+  rejected account does not consume a number.
+- **No printing in the domain.** Accounts return data (`getHistorico()`); `Main` decides how to
+  display it. This is what makes the statement testable.
+
+## Project structure
 
 ```text
 .
-├── src/
-│   ├── main/java/com/github/amandadamata/sistemabancario/
-│   │   ├── Main.java
-│   │   ├── Banco.java
-│   │   ├── Cliente.java
-│   │   ├── Conta.java
-│   │   ├── ContaCorrente.java
-│   │   ├── ContaPoupanca.java
-│   │   ├── Transacao.java
-│   │   └── SaldoInsuficienteException.java
-│   └── test/java/com/github/amandadamata/sistemabancario/
-│       ├── BancoTest.java
-│       ├── ClienteTest.java
-│       └── ContaTest.java
-├── assets/
-│   └── sistema-bancario-banner.png
+├── .github/workflows/ci.yml        # Build and test on Java 17 and 21
+├── .mvn/wrapper/                   # Maven Wrapper configuration
+├── mvnw, mvnw.cmd                  # Maven Wrapper scripts
 ├── pom.xml
-└── README.md
+└── src/
+    ├── main/java/com/github/amandadamata/sistemabancario/
+    │   ├── Banco.java
+    │   ├── Cliente.java
+    │   ├── Conta.java
+    │   ├── ContaCorrente.java
+    │   ├── ContaPoupanca.java
+    │   ├── Main.java
+    │   ├── Moeda.java
+    │   ├── SaldoInsuficienteException.java
+    │   ├── TipoTransacao.java
+    │   └── Transacao.java
+    └── test/java/com/github/amandadamata/sistemabancario/
+        ├── BancoTest.java
+        ├── ClienteTest.java
+        ├── ContaPoupancaTest.java
+        ├── ContaTest.java
+        ├── MainTest.java
+        ├── MoedaTest.java
+        └── RelogioAjustavel.java       # Test clock that advances on demand
 ```
 
-## ▶️ Como executar
+## Prerequisites
 
-Pré-requisitos: JDK 17 ou superior e Maven.
+- JDK 17 or newer (`java -version`)
+- Internet access on the first build, so the Maven Wrapper can download Maven and dependencies
+
+A global Maven installation is not required.
+
+## Build and run (macOS / Linux)
 
 ```bash
 git clone https://github.com/Amandadamata/sistema-bancario-java.git
 cd sistema-bancario-java
-mvn clean package
+./mvnw clean package
 java -jar target/sistema-bancario-java-1.0.0.jar
 ```
 
-## 🧪 Testes
+On Windows, use `mvnw.cmd` instead of `./mvnw`.
 
-```bash
-mvn test
+## Usage example
+
+Real output from the packaged application (menu lines omitted). Account 1000 is a savings account
+that receives a deposit, sends a transfer, earns its monthly yield, and rejects a second yield in
+the same month:
+
+```text
+Rendimento de R$ 4,25 aplicado à conta 1000.
+Erro: O rendimento de 10/2026 já foi aplicado a esta conta.
+
+===== EXTRATO — Conta 1000 (Conta Poupança) — Titular: Ana Souza =====
+[20/10/2026 19:21:04] Depósito                                   +R$ 1.000,00 | Saldo após: R$ 1.000,00
+[20/10/2026 19:21:04] Transferência enviada (para a conta 1001)  -R$ 150,50 | Saldo após: R$ 849,50
+[20/10/2026 19:21:04] Rendimento                                 +R$ 4,25 | Saldo após: R$ 853,75
+Saldo atual: R$ 853,75
 ```
 
-A suíte atual executa 28 testes sobre cadastro, operações financeiras, cheque especial,
-transferências, rendimento e validações de dados e valores.
+The user interface is in Portuguese.
 
-## 🚧 Status e limitações
+## Tests
 
-O projeto está funcional para o escopo educacional atual.
+```bash
+./mvnw test
+```
 
-- Os dados permanecem apenas em memória e são reiniciados ao encerrar a aplicação.
-- Os valores monetários usam `double`; uma evolução natural é adotar `BigDecimal` e regras
-  explícitas de arredondamento.
-- O CPF é tratado como campo obrigatório, sem validação de formato ou dígitos verificadores.
+The suite covers:
+
+- exact cent arithmetic and rejection of zero, negative, null, and over-precise amounts
+- withdrawals and transfers at, within, and beyond the available balance (with and without overdraft)
+- unchanged balances and history after any rejected operation
+- statement entries: type, amount, resulting balance, timestamp, related account, immutability
+- savings yield: calculation, once-per-month rule, next-month availability, `HALF_EVEN` ties
+- account numbering, including rejected accounts not consuming numbers
+- money parsing and `R$` formatting
+- complete menu flows driven by simulated keyboard input, including invalid input and end of input
+
+## Continuous integration
+
+GitHub Actions runs `./mvnw --batch-mode verify` on Java 17 and 21 for every push and pull request
+to `main`. The workflow has read-only repository permissions.
+
+## Security and privacy
+
+- Data exists only in memory; nothing is written to disk or sent over a network.
+- Tests use the fictional CPF `000.000.000-00`.
+- The CPF is required but not validated (format or check digits).
+
+## Known limitations
+
+- No persistence: accounts are lost when the application exits.
+- The savings yield is an educational rule (0.5% per calendar month on the current balance). It does
+  not reproduce the official Brazilian savings rule (anniversary date, TR, Selic).
+- No overdraft interest or fees.
+- Single user, single process; no authentication.
+
+## Possible next steps
+
+- CPF validation with check digits and masking in displayed output
+- Persistence (for example, a file or a relational database)
+
+## License
+
+[MIT](LICENSE)
