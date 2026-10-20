@@ -187,7 +187,7 @@ public class Main {
             descricao += " (" + preposicao + " conta " + transacao.contaRelacionada().getAsInt() + ")";
         }
         String sinal = transacao.tipo().isCredito() ? "+" : "-";
-        return String.format("[%s] %-38s %s%s | Saldo após: %s",
+        return String.format("[%s] %-42s %s%s | Saldo após: %s",
                 transacao.dataHora().format(FORMATO_DATA),
                 descricao,
                 sinal,
