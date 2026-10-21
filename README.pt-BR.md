@@ -26,7 +26,7 @@ rastreável. Este projeto implementa essas regras em Java puro e as verifica com
 
 ## Tecnologias
 
-- Java 17 (também verificado com Java 21 na CI)
+- Java 17 (também verificado com Java 21 e 25 na CI)
 - Maven com Maven Wrapper
 - JUnit 6
 - GitHub Actions
@@ -64,7 +64,7 @@ Principais decisões de projeto (detalhes em [docs/DESIGN_DECISIONS.md](docs/DES
 .
 ├── .github/
 │   ├── dependabot.yml              # Verificação mensal de atualizações de dependências
-│   └── workflows/ci.yml            # Build e testes com Java 17 e 21
+│   └── workflows/ci.yml            # Build e testes com Java 17, 21 e 25
 ├── docs/                           # Arquitetura, decisões de projeto, testes
 ├── .mvn/wrapper/                   # Configuração do Maven Wrapper
 ├── mvnw, mvnw.cmd                  # Scripts do Maven Wrapper
@@ -145,7 +145,7 @@ A suíte cobre:
 
 ## Integração contínua
 
-O GitHub Actions executa `./mvnw --batch-mode verify` com Java 17 e 21 a cada push e pull request
+O GitHub Actions executa `./mvnw --batch-mode verify` com Java 17, 21 e 25 a cada push e pull request
 para a `main`. O workflow tem permissão somente de leitura no repositório.
 
 ## Segurança e privacidade

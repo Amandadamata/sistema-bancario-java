@@ -58,5 +58,5 @@ from 1000), a debit type passed to `creditar`, and a CPF shorter than three char
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs `./mvnw --batch-mode verify` on Java 17 and 21 for every push and
+`.github/workflows/ci.yml` runs `./mvnw --batch-mode verify` on Java 17, 21 and 25 for every push and
 pull request to `main`.
