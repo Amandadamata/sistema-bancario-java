@@ -138,6 +138,33 @@ class RepositorioSqliteTest {
     }
 
     @Test
+    void lancamentoAlteradoForaDaAplicacaoEDetectadoAoCarregar() throws SQLException {
+        Banco banco = Banco.carregar(RELOGIO, new RepositorioSqlite(arquivo));
+        banco.abrirContaPoupanca(ANA);
+        banco.depositar(1000, valor("10.00"));
+        banco.depositar(1000, valor("5.00"));
+        executarSql("UPDATE transacoes SET saldo_resultante_centavos = 2000 WHERE sequencia = 1");
+
+        FalhaPersistenciaException erro = assertThrows(FalhaPersistenciaException.class,
+                () -> Banco.carregar(RELOGIO, new RepositorioSqlite(arquivo)));
+
+        assertTrue(erro.getMessage().contains("um lançamento não corresponde"), erro.getMessage());
+    }
+
+    @Test
+    void tipoDeLancamentoDesconhecidoImpedeOCarregamento() throws SQLException {
+        Banco banco = Banco.carregar(RELOGIO, new RepositorioSqlite(arquivo));
+        banco.abrirContaPoupanca(ANA);
+        banco.depositar(1000, valor("10.00"));
+        executarSql("UPDATE transacoes SET tipo = 'ESTORNO' WHERE sequencia = 1");
+
+        FalhaPersistenciaException erro = assertThrows(FalhaPersistenciaException.class,
+                () -> new RepositorioSqlite(arquivo).carregar());
+
+        assertTrue(erro.getMessage().contains("O arquivo não foi alterado"), erro.getMessage());
+    }
+
+    @Test
     void restricoesDoBancoDeDadosRecusamDadosInvalidos() throws SQLException {
         new RepositorioSqlite(arquivo);
 

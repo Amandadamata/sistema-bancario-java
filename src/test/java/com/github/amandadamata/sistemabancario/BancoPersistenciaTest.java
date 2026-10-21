@@ -128,6 +128,16 @@ class BancoPersistenciaTest {
     }
 
     @Test
+    void operacaoEmContaInexistenteERecusada() {
+        IllegalArgumentException erro = assertThrows(IllegalArgumentException.class,
+                () -> banco.depositar(9999, valor("10.00")));
+
+        assertAll(
+                () -> assertEquals("Conta não encontrada: 9999", erro.getMessage()),
+                () -> assertTrue(repositorio.chamadas.isEmpty()));
+    }
+
+    @Test
     void carregarRestauraContasHistoricoNumeracaoERendimento() throws SaldoInsuficienteException {
         ContaCorrente corrente = banco.abrirContaCorrente(ANA, valor("200.00"));
         ContaPoupanca poupanca = banco.abrirContaPoupanca(BRUNO);
