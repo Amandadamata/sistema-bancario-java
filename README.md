@@ -28,7 +28,7 @@ implements those rules in plain Java and verifies them with automated tests.
 
 - Java 17 (also verified on Java 21 in CI)
 - Maven with the Maven Wrapper
-- JUnit 5
+- JUnit 6
 - GitHub Actions
 
 ## Architecture

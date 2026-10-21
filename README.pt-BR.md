@@ -28,7 +28,7 @@ rastreável. Este projeto implementa essas regras em Java puro e as verifica com
 
 - Java 17 (também verificado com Java 21 na CI)
 - Maven com Maven Wrapper
-- JUnit 5
+- JUnit 6
 - GitHub Actions
 
 ## Arquitetura
