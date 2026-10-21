@@ -83,6 +83,6 @@ class BancoTest {
     }
 
     private static Cliente cliente() {
-        return new Cliente("Cliente", "000.000.000-00");
+        return new Cliente("Cliente", "246.813.579-28");
     }
 }

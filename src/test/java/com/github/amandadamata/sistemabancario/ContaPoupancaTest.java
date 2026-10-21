@@ -19,7 +19,7 @@ class ContaPoupancaTest {
     @BeforeEach
     void abrirConta() {
         relogio = RelogioAjustavel.em("2026-10-20T13:00:00Z");
-        conta = new Banco(relogio).abrirContaPoupanca(new Cliente("Cliente", "000.000.000-00"));
+        conta = new Banco(relogio).abrirContaPoupanca(new Cliente("Cliente", "246.813.579-28"));
     }
 
     @Test

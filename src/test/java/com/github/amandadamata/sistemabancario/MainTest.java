@@ -8,6 +8,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Executa o menu com entradas simuladas, como uma pessoa digitando no terminal. */
@@ -16,8 +17,8 @@ class MainTest {
     @Test
     void fluxoCompletoComValoresEmFormatoBrasileiro() {
         String saida = executar(
-                "1", "Ana Teste", "000.000.000-00", "2", // conta poupança 1000
-                "1", "Bruno Teste", "000.000.000-00", "1", "100,00", // conta corrente 1001
+                "1", "Ana Teste", "246.813.579-28", "2", // conta poupança 1000
+                "1", "Bruno Teste", "135.792.468-28", "1", "100,00", // conta corrente 1001
                 "2", "1000", "0,10",
                 "2", "1000", "0,20",
                 "4", "1000", "1001", "0,05",
@@ -35,7 +36,7 @@ class MainTest {
     @Test
     void rendimentoRepetidoNoMesmoMesEhRecusado() {
         String saida = executar(
-                "1", "Ana Teste", "000.000.000-00", "2",
+                "1", "Ana Teste", "246.813.579-28", "2",
                 "2", "1000", "1000",
                 "7", "1000",
                 "7", "1000",
@@ -50,7 +51,7 @@ class MainTest {
     void entradasInvalidasPedemNovoValorSemEncerrarOMenu() {
         String saida = executar(
                 "abc",
-                "1", "Ana Teste", "000.000.000-00", "2",
+                "1", "Ana Teste", "246.813.579-28", "2",
                 "2", "1000", "dez reais", "10,999", "10,99",
                 "3", "1000", "0",
                 "2", "9999",
@@ -69,8 +70,8 @@ class MainTest {
     void operacoesRecusadasExtratoVazioEListagem() {
         String saida = executar(
                 "6",                                                   // listar sem contas
-                "1", "Ana Teste", "000.000.000-00", "1", "50",         // corrente 1000, limite 50
-                "1", "Bruno Teste", "000.000.000-00", "2",             // poupança 1001
+                "1", "Ana Teste", "246.813.579-28", "1", "50",         // corrente 1000, limite 50
+                "1", "Bruno Teste", "135.792.468-28", "2",             // poupança 1001
                 "5", "1001",                                           // extrato vazio
                 "3", "1000", "50,01",                                  // saque acima do disponível
                 "7", "1000",                                           // rendimento em corrente
@@ -89,6 +90,19 @@ class MainTest {
                 () -> assertTrue(saida.contains("Erro: Não é possível transferir para a mesma conta."), saida),
                 () -> assertTrue(saida.contains("Nº 1001 | Conta Poupança | Titular: Bruno Teste"), saida),
                 () -> assertTrue(saida.contains("Limite do cheque especial: R$ 50,00 | Disponível: R$ 50,00"), saida));
+    }
+
+    @Test
+    void cpfInvalidoEPedidoDeNovoSemRepetirONumero() {
+        String saida = executar(
+                "1", "Ana Teste", "123", "246.813.579-29", "246.813.579-28", "2",
+                "0");
+
+        assertAll(
+                () -> assertTrue(saida.contains("O CPF deve ter 11 dígitos."), saida),
+                () -> assertTrue(saida.contains("CPF inválido: os dígitos verificadores não conferem."), saida),
+                () -> assertTrue(saida.contains("Conta criada com sucesso! Número: 1000"), saida),
+                () -> assertFalse(saida.contains("246.813.579"), saida));
     }
 
     @Test

@@ -1,37 +1,39 @@
 package com.github.amandadamata.sistemabancario;
 
+import java.util.Objects;
+
 public final class Cliente {
 
     private final String nome;
-    private final String cpf;
+    private final Cpf cpf;
 
+    /** @throws IllegalArgumentException se o nome estiver vazio ou o CPF for inválido */
     public Cliente(String nome, String cpf) {
-        this.nome = validarCampoObrigatorio(nome, "nome");
-        this.cpf = validarCampoObrigatorio(cpf, "CPF");
+        this(nome, Cpf.de(cpf));
     }
 
-    private static String validarCampoObrigatorio(String valor, String nomeCampo) {
-        if (valor == null || valor.isBlank()) {
-            throw new IllegalArgumentException("O " + nomeCampo + " do cliente é obrigatório.");
+    public Cliente(String nome, Cpf cpf) {
+        if (nome == null || nome.isBlank()) {
+            throw new IllegalArgumentException("O nome do cliente é obrigatório.");
         }
-        return valor.trim();
+        this.nome = nome.trim();
+        this.cpf = Objects.requireNonNull(cpf, "O CPF é obrigatório.");
     }
 
     public String getNome() {
         return nome;
     }
 
-    public String getCpf() {
+    public Cpf getCpf() {
         return cpf;
     }
 
     /**
-     * Mostra apenas os dois últimos caracteres do CPF. {@code toString()} costuma aparecer em logs
-     * e mensagens de depuração, onde o documento completo não deve ser exposto.
+     * Mostra o CPF mascarado. {@code toString()} costuma aparecer em logs e mensagens de
+     * depuração, onde o documento completo não deve ser exposto.
      */
     @Override
     public String toString() {
-        String finalDoCpf = cpf.length() <= 2 ? cpf : cpf.substring(cpf.length() - 2);
-        return nome + " (CPF terminado em " + finalDoCpf + ")";
+        return nome + " (CPF " + cpf.mascarado() + ")";
     }
 }

@@ -79,7 +79,7 @@ public class Main {
 
     private void criarConta() {
         String nome = lerTextoObrigatorio("Nome do titular: ");
-        String cpf = lerTextoObrigatorio("CPF do titular: ");
+        Cpf cpf = lerCpf();
         Cliente cliente = new Cliente(nome, cpf);
 
         saida.println("Tipo de conta: 1 - Corrente | 2 - Poupança");
@@ -262,6 +262,18 @@ public class Main {
                 return Moeda.converter(scanner.nextLine());
             } catch (IllegalArgumentException e) {
                 saida.print(e.getMessage() + " Tente novamente: ");
+            }
+        }
+    }
+
+    /** Repete a pergunta até receber um CPF válido. A mensagem de erro não repete o número. */
+    private Cpf lerCpf() {
+        while (true) {
+            saida.print("CPF do titular: ");
+            try {
+                return Cpf.de(scanner.nextLine());
+            } catch (IllegalArgumentException e) {
+                saida.println(e.getMessage());
             }
         }
     }
