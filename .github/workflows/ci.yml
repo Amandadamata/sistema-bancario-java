@@ -16,8 +16,8 @@ jobs:
 
     strategy:
       matrix:
-        # 17 is the minimum supported version; 21 is the current LTS.
-        java: ['17', '21']
+        # 17 is the minimum supported version; 21 and 25 are later LTS releases.
+        java: ['17', '21', '25']
 
     steps:
       - name: Check out repository

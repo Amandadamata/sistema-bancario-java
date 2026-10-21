@@ -26,7 +26,7 @@ implements those rules in plain Java and verifies them with automated tests.
 
 ## Technologies
 
-- Java 17 (also verified on Java 21 in CI)
+- Java 17 (also verified on Java 21 and 25 in CI)
 - Maven with the Maven Wrapper
 - JUnit 6
 - GitHub Actions
@@ -64,7 +64,7 @@ Key design decisions (details in [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISION
 .
 ├── .github/
 │   ├── dependabot.yml              # Monthly dependency update checks
-│   └── workflows/ci.yml            # Build and test on Java 17 and 21
+│   └── workflows/ci.yml            # Build and test on Java 17, 21 and 25
 ├── docs/                           # Architecture, design decisions, testing
 ├── .mvn/wrapper/                   # Maven Wrapper configuration
 ├── mvnw, mvnw.cmd                  # Maven Wrapper scripts
@@ -147,7 +147,7 @@ The suite covers:
 
 ## Continuous integration
 
-GitHub Actions runs `./mvnw --batch-mode verify` on Java 17 and 21 for every push and pull request
+GitHub Actions runs `./mvnw --batch-mode verify` on Java 17, 21 and 25 for every push and pull request
 to `main`. The workflow has read-only repository permissions.
 
 ## Security and privacy
