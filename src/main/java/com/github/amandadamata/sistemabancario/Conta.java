@@ -1,121 +1,103 @@
 package com.github.amandadamata.sistemabancario;
 
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
+import java.util.OptionalInt;
 
 /** Define o estado e as operações comuns às contas bancárias. */
 public abstract class Conta {
 
-    private static final int PRIMEIRO_NUMERO_CONTA = 1000;
-    private static int proximoNumero = PRIMEIRO_NUMERO_CONTA;
-
     private final int numero;
     private final Cliente titular;
-    private final List<Transacao> historico;
-    private double saldo;
+    private final Clock relogio;
+    private final List<Transacao> historico = new ArrayList<>();
+    private BigDecimal saldo = BigDecimal.ZERO.setScale(Moeda.ESCALA);
 
-    protected Conta(Cliente titular) {
-        this.numero = proximoNumero++;
-        this.titular = Objects.requireNonNull(titular, "O titular é obrigatório.");
-        this.historico = new ArrayList<>();
-    }
-
-    public void depositar(double valor) {
-        creditar(valor, "DEPÓSITO");
-    }
-
-    public void sacar(double valor) throws SaldoInsuficienteException {
-        validarValorPositivo(valor, "O valor do saque deve ser um número finito maior que zero.");
-
-        double saldoDisponivel = calcularSaldoDisponivel();
-        if (valor > saldoDisponivel) {
-            throw new SaldoInsuficienteException(
-                    "Saldo insuficiente. Disponível para saque: R$ "
-                            + String.format(Locale.US, "%.2f", saldoDisponivel));
+    /**
+     * Contas são abertas pelo {@link Banco}, que controla a numeração. Por isso o construtor não
+     * é público.
+     */
+    protected Conta(int numero, Cliente titular, Clock relogio) {
+        if (numero <= 0) {
+            throw new IllegalArgumentException("O número da conta deve ser positivo.");
         }
+        this.numero = numero;
+        this.titular = Objects.requireNonNull(titular, "O titular é obrigatório.");
+        this.relogio = Objects.requireNonNull(relogio, "O relógio é obrigatório.");
+    }
 
-        debitar(valor, "SAQUE");
+    public void depositar(BigDecimal valor) {
+        BigDecimal valorValidado = Moeda.validarValorPositivo(
+                valor, "O valor do depósito deve ser maior que zero.");
+        registrar(TipoTransacao.DEPOSITO, valorValidado, OptionalInt.empty());
+    }
+
+    public void sacar(BigDecimal valor) throws SaldoInsuficienteException {
+        BigDecimal valorValidado = Moeda.validarValorPositivo(
+                valor, "O valor do saque deve ser maior que zero.");
+        garantirSaldoDisponivel(valorValidado, "saque");
+        registrar(TipoTransacao.SAQUE, valorValidado, OptionalInt.empty());
     }
 
     /**
      * Transfere um valor para outra conta.
      *
+     * <p>Todas as validações acontecem antes de qualquer alteração de saldo, então uma
+     * transferência recusada não deixa nenhuma das contas modificada.
+     *
      * @throws SaldoInsuficienteException quando a conta de origem não possui saldo disponível
      * @throws IllegalArgumentException quando o destino ou o valor são inválidos
      */
-    public void transferir(Conta destino, double valor) throws SaldoInsuficienteException {
+    public void transferir(Conta destino, BigDecimal valor) throws SaldoInsuficienteException {
         if (destino == null) {
             throw new IllegalArgumentException("Conta de destino inválida.");
         }
         if (destino == this) {
             throw new IllegalArgumentException("Não é possível transferir para a mesma conta.");
         }
+        BigDecimal valorValidado = Moeda.validarValorPositivo(
+                valor, "O valor da transferência deve ser maior que zero.");
+        garantirSaldoDisponivel(valorValidado, "transferência");
 
-        validarValorPositivo(
-                valor, "O valor da transferência deve ser um número finito maior que zero.");
+        registrar(TipoTransacao.TRANSFERENCIA_ENVIADA, valorValidado, OptionalInt.of(destino.numero));
+        destino.registrar(TipoTransacao.TRANSFERENCIA_RECEBIDA, valorValidado, OptionalInt.of(numero));
+    }
 
-        double saldoDisponivel = calcularSaldoDisponivel();
-        if (valor > saldoDisponivel) {
-            throw new SaldoInsuficienteException(
-                    "Saldo insuficiente. Disponível para transferência: R$ "
-                            + String.format(Locale.US, "%.2f", saldoDisponivel));
+    /** Permite que subclasses registrem créditos próprios, como o rendimento da poupança. */
+    protected final void creditar(BigDecimal valor, TipoTransacao tipo) {
+        if (!tipo.isCredito()) {
+            throw new IllegalArgumentException("O tipo informado não é um crédito: " + tipo);
         }
-
-        destino.validarCredito(valor);
-        debitar(valor, "TRANSFERÊNCIA ENVIADA (conta " + destino.getNumero() + ")");
-        destino.creditar(valor, "TRANSFERÊNCIA RECEBIDA (conta " + numero + ")");
+        registrar(tipo, Moeda.validarValorPositivo(valor, "O crédito deve ser maior que zero."),
+                OptionalInt.empty());
     }
 
-    protected void creditar(double valor, String descricao) {
-        validarCredito(valor);
-        saldo += valor;
-        registrarTransacao(descricao, valor);
-    }
-
-    protected double calcularSaldoDisponivel() {
+    /** Saldo que pode ser usado em saques e transferências. */
+    protected BigDecimal calcularSaldoDisponivel() {
         return saldo;
     }
 
-    private void validarCredito(double valor) {
-        validarValorPositivo(valor, "O valor deve ser um número finito maior que zero.");
-        if (!Double.isFinite(saldo + valor)) {
-            throw new IllegalArgumentException("O saldo resultante excede o limite suportado.");
+    protected final Clock getRelogio() {
+        return relogio;
+    }
+
+    private void garantirSaldoDisponivel(BigDecimal valor, String operacao)
+            throws SaldoInsuficienteException {
+        BigDecimal disponivel = calcularSaldoDisponivel();
+        if (valor.compareTo(disponivel) > 0) {
+            throw new SaldoInsuficienteException("Saldo insuficiente. Disponível para " + operacao
+                    + ": " + Moeda.formatar(disponivel));
         }
     }
 
-    private static void validarValorPositivo(double valor, String mensagem) {
-        if (!Double.isFinite(valor) || valor <= 0) {
-            throw new IllegalArgumentException(mensagem);
-        }
-    }
-
-    private void debitar(double valor, String descricao) {
-        double novoSaldo = saldo - valor;
-        if (!Double.isFinite(novoSaldo)) {
-            throw new IllegalArgumentException("O saldo resultante excede o limite suportado.");
-        }
-        saldo = novoSaldo;
-        registrarTransacao(descricao, valor);
-    }
-
-    private void registrarTransacao(String descricao, double valor) {
-        historico.add(new Transacao(descricao, valor, saldo));
-    }
-
-    public void exibirExtrato() {
-        System.out.println("\n===== EXTRATO — Conta " + numero + " (" + getTipoConta()
-                + ") — Titular: " + titular.getNome() + " =====");
-        if (historico.isEmpty()) {
-            System.out.println("Nenhuma movimentação registrada ainda.");
-        } else {
-            for (Transacao transacao : historico) {
-                System.out.println(transacao);
-            }
-        }
-        System.out.printf(Locale.US, "Saldo atual: R$ %.2f%n", saldo);
-        System.out.println("=================================================\n");
+    private void registrar(TipoTransacao tipo, BigDecimal valor, OptionalInt contaRelacionada) {
+        saldo = tipo.isCredito() ? saldo.add(valor) : saldo.subtract(valor);
+        historico.add(new Transacao(
+                tipo, valor, saldo, LocalDateTime.now(relogio), contaRelacionada));
     }
 
     public abstract String getTipoConta();
@@ -128,8 +110,16 @@ public abstract class Conta {
         return titular;
     }
 
-    public double getSaldo() {
+    public BigDecimal getSaldo() {
         return saldo;
     }
 
+    public final BigDecimal getSaldoDisponivel() {
+        return calcularSaldoDisponivel();
+    }
+
+    /** Histórico em ordem cronológica. A lista retornada não pode ser alterada. */
+    public List<Transacao> getHistorico() {
+        return List.copyOf(historico);
+    }
 }

@@ -1,21 +1,22 @@
 package com.github.amandadamata.sistemabancario;
 
+import java.math.BigDecimal;
+import java.time.Clock;
+
 public final class ContaCorrente extends Conta {
 
-    private final double limiteChequeEspecial;
+    private final BigDecimal limiteChequeEspecial;
 
-    public ContaCorrente(Cliente titular, double limiteChequeEspecial) {
-        super(titular);
-        if (!Double.isFinite(limiteChequeEspecial) || limiteChequeEspecial < 0) {
-            throw new IllegalArgumentException(
-                    "O limite do cheque especial deve ser um número finito maior ou igual a zero.");
-        }
-        this.limiteChequeEspecial = limiteChequeEspecial;
+    ContaCorrente(int numero, Cliente titular, BigDecimal limiteChequeEspecial, Clock relogio) {
+        super(numero, titular, relogio);
+        this.limiteChequeEspecial = Moeda.validarValorNaoNegativo(limiteChequeEspecial,
+                "O limite do cheque especial deve ser maior ou igual a zero.");
     }
 
+    /** O cheque especial permite usar o limite além do saldo, deixando o saldo negativo. */
     @Override
-    protected double calcularSaldoDisponivel() {
-        return getSaldo() + limiteChequeEspecial;
+    protected BigDecimal calcularSaldoDisponivel() {
+        return getSaldo().add(limiteChequeEspecial);
     }
 
     @Override
@@ -23,7 +24,7 @@ public final class ContaCorrente extends Conta {
         return "Conta Corrente";
     }
 
-    public double getLimiteChequeEspecial() {
+    public BigDecimal getLimiteChequeEspecial() {
         return limiteChequeEspecial;
     }
 }

@@ -1,10 +1,15 @@
 package com.github.amandadamata.sistemabancario;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
-import java.util.stream.Stream;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.OptionalInt;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -13,134 +18,211 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ContaTest {
 
-    private static final double MARGEM_ERRO = 0.001;
+    private RelogioAjustavel relogio;
+    private Banco banco;
+
+    @BeforeEach
+    void criarBanco() {
+        relogio = RelogioAjustavel.em("2026-10-20T13:00:00Z");
+        banco = new Banco(relogio);
+    }
 
     @Test
-    void depositoValidoAtualizaSaldo() {
-        ContaPoupanca conta = novaContaPoupanca("Cliente");
+    void somaDeCentavosEExata() {
+        ContaPoupanca conta = novaPoupanca();
 
-        conta.depositar(150.75);
+        conta.depositar(valor("0.10"));
+        conta.depositar(valor("0.20"));
 
-        assertEquals(150.75, conta.getSaldo(), MARGEM_ERRO);
+        // Com double, o saldo seria 0.30000000000000004.
+        assertEquals(valor("0.30"), conta.getSaldo());
+    }
+
+    @Test
+    void saldoSempreTemDuasCasasDecimais() {
+        ContaPoupanca conta = novaPoupanca();
+
+        conta.depositar(new BigDecimal("150"));
+
+        assertEquals("150.00", conta.getSaldo().toPlainString());
     }
 
     @ParameterizedTest
-    @MethodSource("valoresInvalidos")
-    void operacoesComValorInvalidoSaoRecusadas(double valor) {
-        ContaPoupanca origem = novaContaPoupanca("Origem");
-        ContaPoupanca destino = novaContaPoupanca("Destino");
-        origem.depositar(100.00);
+    @NullSource
+    @ValueSource(strings = {"0", "0.00", "-10.00", "0.001", "10.005"})
+    void operacoesComValorInvalidoSaoRecusadasSemAlterarSaldos(BigDecimal valorInvalido) {
+        ContaPoupanca origem = novaPoupanca();
+        ContaPoupanca destino = novaPoupanca();
+        origem.depositar(valor("100.00"));
 
         assertAll(
                 () -> assertThrows(IllegalArgumentException.class,
-                        () -> origem.depositar(valor)),
+                        () -> origem.depositar(valorInvalido)),
                 () -> assertThrows(IllegalArgumentException.class,
-                        () -> origem.sacar(valor)),
+                        () -> origem.sacar(valorInvalido)),
                 () -> assertThrows(IllegalArgumentException.class,
-                        () -> origem.transferir(destino, valor)),
-                () -> assertEquals(100.00, origem.getSaldo(), MARGEM_ERRO),
-                () -> assertEquals(0.00, destino.getSaldo(), MARGEM_ERRO));
+                        () -> origem.transferir(destino, valorInvalido)),
+                () -> assertEquals(valor("100.00"), origem.getSaldo()),
+                () -> assertEquals(valor("0.00"), destino.getSaldo()),
+                () -> assertEquals(1, origem.getHistorico().size()));
     }
 
     @Test
     void saqueValidoAtualizaSaldo() throws SaldoInsuficienteException {
-        ContaPoupanca conta = novaContaPoupanca("Cliente");
-        conta.depositar(200.00);
+        ContaPoupanca conta = novaPoupanca();
+        conta.depositar(valor("200.00"));
 
-        conta.sacar(75.25);
+        conta.sacar(valor("75.25"));
 
-        assertEquals(124.75, conta.getSaldo(), MARGEM_ERRO);
+        assertEquals(valor("124.75"), conta.getSaldo());
     }
 
     @Test
-    void saqueComSaldoInsuficienteMantemSaldo() {
-        ContaPoupanca conta = novaContaPoupanca("Cliente");
-        conta.depositar(100.00);
+    void saqueDeTodoOSaldoEPermitido() throws SaldoInsuficienteException {
+        ContaPoupanca conta = novaPoupanca();
+        conta.depositar(valor("100.00"));
 
-        assertThrows(SaldoInsuficienteException.class, () -> conta.sacar(100.01));
-        assertEquals(100.00, conta.getSaldo(), MARGEM_ERRO);
+        conta.sacar(valor("100.00"));
+
+        assertEquals(valor("0.00"), conta.getSaldo());
     }
 
     @Test
-    void contaCorrentePermiteUsarChequeEspecialAteOLimite()
-            throws SaldoInsuficienteException {
-        ContaCorrente conta = new ContaCorrente(novoCliente("Cliente"), 200.00);
-        conta.depositar(100.00);
+    void saqueComSaldoInsuficienteMantemSaldoEInformaODisponivel() {
+        ContaPoupanca conta = novaPoupanca();
+        conta.depositar(valor("100.00"));
 
-        conta.sacar(250.00);
+        SaldoInsuficienteException erro = assertThrows(SaldoInsuficienteException.class,
+                () -> conta.sacar(valor("100.01")));
 
-        assertEquals(-150.00, conta.getSaldo(), MARGEM_ERRO);
-        assertThrows(SaldoInsuficienteException.class, () -> conta.sacar(50.01));
-        assertEquals(-150.00, conta.getSaldo(), MARGEM_ERRO);
+        assertAll(
+                () -> assertEquals(valor("100.00"), conta.getSaldo()),
+                () -> assertTrue(erro.getMessage().contains("R$ 100,00"), erro.getMessage()));
+    }
+
+    @Test
+    void contaCorrentePermiteUsarChequeEspecialAteOLimite() throws SaldoInsuficienteException {
+        ContaCorrente conta = banco.abrirContaCorrente(cliente("Cliente"), valor("200.00"));
+        conta.depositar(valor("100.00"));
+
+        conta.sacar(valor("250.00"));
+
+        assertAll(
+                () -> assertEquals(valor("-150.00"), conta.getSaldo()),
+                () -> assertEquals(valor("50.00"), conta.getSaldoDisponivel()));
+        assertThrows(SaldoInsuficienteException.class, () -> conta.sacar(valor("50.01")));
+        assertEquals(valor("-150.00"), conta.getSaldo());
+    }
+
+    @Test
+    void transferenciaPodeUsarChequeEspecial() throws SaldoInsuficienteException {
+        ContaCorrente origem = banco.abrirContaCorrente(cliente("Origem"), valor("100.00"));
+        ContaPoupanca destino = novaPoupanca();
+
+        origem.transferir(destino, valor("100.00"));
+
+        assertAll(
+                () -> assertEquals(valor("-100.00"), origem.getSaldo()),
+                () -> assertEquals(valor("100.00"), destino.getSaldo()));
+        assertThrows(SaldoInsuficienteException.class,
+                () -> origem.transferir(destino, valor("0.01")));
     }
 
     @Test
     void transferenciaBemSucedidaAtualizaOsDoisSaldos() throws SaldoInsuficienteException {
-        ContaCorrente origem = new ContaCorrente(novoCliente("Origem"), 0);
-        ContaPoupanca destino = novaContaPoupanca("Destino");
-        origem.depositar(300.00);
+        ContaCorrente origem = banco.abrirContaCorrente(cliente("Origem"), valor("0.00"));
+        ContaPoupanca destino = novaPoupanca();
+        origem.depositar(valor("300.00"));
 
-        origem.transferir(destino, 125.50);
+        origem.transferir(destino, valor("125.50"));
 
         assertAll(
-                () -> assertEquals(174.50, origem.getSaldo(), MARGEM_ERRO),
-                () -> assertEquals(125.50, destino.getSaldo(), MARGEM_ERRO));
+                () -> assertEquals(valor("174.50"), origem.getSaldo()),
+                () -> assertEquals(valor("125.50"), destino.getSaldo()));
     }
 
     @Test
-    void transferenciaSemSaldoMantemOsDoisSaldos() {
-        ContaPoupanca origem = novaContaPoupanca("Origem");
-        ContaPoupanca destino = novaContaPoupanca("Destino");
-        origem.depositar(100.00);
-        destino.depositar(50.00);
+    void transferenciaSemSaldoNaoAlteraNenhumaConta() {
+        ContaPoupanca origem = novaPoupanca();
+        ContaPoupanca destino = novaPoupanca();
+        origem.depositar(valor("100.00"));
+        destino.depositar(valor("50.00"));
 
         assertThrows(SaldoInsuficienteException.class,
-                () -> origem.transferir(destino, 100.01));
+                () -> origem.transferir(destino, valor("100.01")));
 
         assertAll(
-                () -> assertEquals(100.00, origem.getSaldo(), MARGEM_ERRO),
-                () -> assertEquals(50.00, destino.getSaldo(), MARGEM_ERRO));
+                () -> assertEquals(valor("100.00"), origem.getSaldo()),
+                () -> assertEquals(valor("50.00"), destino.getSaldo()),
+                () -> assertEquals(1, origem.getHistorico().size()),
+                () -> assertEquals(1, destino.getHistorico().size()));
     }
 
     @Test
     void transferenciaComDestinoInvalidoMantemSaldo() {
-        ContaPoupanca conta = novaContaPoupanca("Cliente");
-        conta.depositar(100.00);
+        ContaPoupanca conta = novaPoupanca();
+        conta.depositar(valor("100.00"));
 
         assertAll(
                 () -> assertThrows(IllegalArgumentException.class,
-                        () -> conta.transferir(conta, 50.00)),
+                        () -> conta.transferir(conta, valor("50.00"))),
                 () -> assertThrows(IllegalArgumentException.class,
-                        () -> conta.transferir(null, 50.00)),
-                () -> assertEquals(100.00, conta.getSaldo(), MARGEM_ERRO));
+                        () -> conta.transferir(null, valor("50.00"))),
+                () -> assertEquals(valor("100.00"), conta.getSaldo()));
     }
 
     @Test
-    void rendimentoDaPoupancaCalculaMeioPorCento() {
-        ContaPoupanca conta = novaContaPoupanca("Cliente");
-        conta.depositar(1000.00);
+    void historicoRegistraTipoValorSaldoDataEContaRelacionada() throws SaldoInsuficienteException {
+        ContaCorrente origem = banco.abrirContaCorrente(cliente("Origem"), valor("0.00"));
+        ContaPoupanca destino = novaPoupanca();
+        origem.depositar(valor("500.00"));
+        origem.sacar(valor("120.00"));
+        origem.transferir(destino, valor("80.00"));
+        LocalDateTime agora = LocalDateTime.of(2026, 10, 20, 13, 0);
 
-        double rendimento = conta.aplicarRendimento();
+        List<Transacao> historico = origem.getHistorico();
 
-        assertAll(
-                () -> assertEquals(5.00, rendimento, MARGEM_ERRO),
-                () -> assertEquals(1005.00, conta.getSaldo(), MARGEM_ERRO));
+        assertEquals(List.of(
+                new Transacao(TipoTransacao.DEPOSITO, valor("500.00"), valor("500.00"),
+                        agora, OptionalInt.empty()),
+                new Transacao(TipoTransacao.SAQUE, valor("120.00"), valor("380.00"),
+                        agora, OptionalInt.empty()),
+                new Transacao(TipoTransacao.TRANSFERENCIA_ENVIADA, valor("80.00"), valor("300.00"),
+                        agora, OptionalInt.of(destino.getNumero()))),
+                historico);
+        assertEquals(List.of(new Transacao(TipoTransacao.TRANSFERENCIA_RECEBIDA, valor("80.00"),
+                        valor("80.00"), agora, OptionalInt.of(origem.getNumero()))),
+                destino.getHistorico());
     }
 
     @Test
-    void depositoQueUltrapassaFaixaDoDoubleERecusado() {
-        ContaPoupanca conta = novaContaPoupanca("Cliente");
-        conta.depositar(Double.MAX_VALUE);
+    void valorComSinalDiferenciaCreditoDeDebito() throws SaldoInsuficienteException {
+        ContaPoupanca conta = novaPoupanca();
+        conta.depositar(valor("10.00"));
+        conta.sacar(valor("3.00"));
 
-        assertThrows(IllegalArgumentException.class, () -> conta.depositar(Double.MAX_VALUE));
-        assertTrue(Double.isFinite(conta.getSaldo()));
-        assertEquals(Double.MAX_VALUE, conta.getSaldo());
+        List<BigDecimal> valores = conta.getHistorico().stream()
+                .map(Transacao::valorComSinal)
+                .toList();
+
+        assertEquals(List.of(valor("10.00"), valor("-3.00")), valores);
+    }
+
+    @Test
+    void historicoRetornadoNaoPodeSerAlterado() {
+        ContaPoupanca conta = novaPoupanca();
+        conta.depositar(valor("10.00"));
+
+        List<Transacao> historico = conta.getHistorico();
+
+        assertThrows(UnsupportedOperationException.class, historico::clear);
+        assertEquals(1, conta.getHistorico().size());
     }
 
     @Test
     void tiposDeContaSaoIdentificadosCorretamente() {
-        Conta corrente = new ContaCorrente(novoCliente("Corrente"), 100.00);
-        Conta poupanca = novaContaPoupanca("Poupança");
+        Conta corrente = banco.abrirContaCorrente(cliente("Corrente"), valor("100.00"));
+        Conta poupanca = novaPoupanca();
 
         assertAll(
                 () -> assertEquals("Conta Corrente", corrente.getTipoConta()),
@@ -149,19 +231,26 @@ class ContaTest {
 
     @Test
     void contaSemTitularERecusada() {
-        assertThrows(NullPointerException.class, () -> new ContaPoupanca(null));
+        assertThrows(NullPointerException.class, () -> banco.abrirContaPoupanca(null));
     }
 
-    private static Stream<Double> valoresInvalidos() {
-        return Stream.of(0.0, -10.0, Double.NaN,
-                Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY);
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"-0.01", "10.001"})
+    void limiteDoChequeEspecialInvalidoERecusado(BigDecimal limite) {
+        assertThrows(IllegalArgumentException.class,
+                () -> banco.abrirContaCorrente(cliente("Cliente"), limite));
     }
 
-    private static ContaPoupanca novaContaPoupanca(String nome) {
-        return new ContaPoupanca(novoCliente(nome));
+    private ContaPoupanca novaPoupanca() {
+        return banco.abrirContaPoupanca(cliente("Cliente"));
     }
 
-    private static Cliente novoCliente(String nome) {
+    private static Cliente cliente(String nome) {
         return new Cliente(nome, "000.000.000-00");
+    }
+
+    private static BigDecimal valor(String texto) {
+        return new BigDecimal(texto);
     }
 }
