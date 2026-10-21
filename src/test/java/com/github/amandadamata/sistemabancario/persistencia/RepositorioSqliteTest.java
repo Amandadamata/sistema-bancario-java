@@ -179,6 +179,17 @@ class RepositorioSqliteTest {
                 }));
     }
 
+    /** O teste anterior usa uma conexão própria; este confere as conexões abertas pelo repositório. */
+    @Test
+    void conexoesDoRepositorioLigamAsChavesEstrangeiras() throws SQLException {
+        RepositorioSqlite repositorio = new RepositorioSqlite(arquivo);
+
+        try (Connection conexao = repositorio.abrirConexao(); Statement consulta = conexao.createStatement();
+             ResultSet resultado = consulta.executeQuery("PRAGMA foreign_keys")) {
+            assertEquals(1, resultado.getInt(1));
+        }
+    }
+
     @Test
     void bancoNovoRecebeOEsquemaNaVersaoAtual() throws SQLException {
         new RepositorioSqlite(arquivo);

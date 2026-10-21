@@ -179,8 +179,8 @@ public final class RepositorioSqlite implements RepositorioBanco {
         }
     }
 
-    /** Cada conexão liga as chaves estrangeiras: no SQLite elas vêm desligadas por padrão. */
-    private Connection abrirConexao() throws SQLException {
+    /** Liga as chaves estrangeiras, desligadas por padrão no SQLite. De pacote para ser testado. */
+    Connection abrirConexao() throws SQLException {
         Connection conexao = DriverManager.getConnection("jdbc:sqlite:" + arquivo);
         try (Statement comando = conexao.createStatement()) {
             comando.execute("PRAGMA foreign_keys = ON");
