@@ -148,10 +148,10 @@ sequenceDiagram
     Banco->>Origem: capturarEstado()
     Banco->>Destino: capturarEstado()
     Banco->>Origem: transferir(destino, 40.00)
-    Note over Origem,Destino: validates first; debits origin, credits destination (memory)
+    Note over Origem,Destino: validates first, then debits origin and credits destination (memory)
     Banco->>Repo: salvar([origin, destination])
     Repo->>DB: BEGIN (autoCommit = false)
-    Repo->>DB: upsert customers, accounts; insert new statement rows
+    Repo->>DB: upsert customers and accounts, insert new statement rows
     alt every command succeeds
         Repo->>DB: COMMIT
         Banco-->>Main: ok
