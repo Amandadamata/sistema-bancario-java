@@ -9,3 +9,10 @@ target/
 
 hs_err_pid*
 replay_pid*
+
+# Local database (personal data; never commit)
+dados/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

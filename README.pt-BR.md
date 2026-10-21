@@ -4,15 +4,17 @@
 
 [English](README.md) · **Português (Brasil)**
 
-Aplicação de linha de comando que modela contas corrente e poupança com aritmética monetária exata,
-cheque especial, transferências, rendimento mensal da poupança e extrato com movimentações tipadas.
-É um projeto de fundamentos de Java focado em orientação a objetos, regras de negócio e testes.
+Aplicação de linha de comando com contas corrente e poupança, aritmética monetária exata, cheque
+especial, transferências, rendimento mensal da poupança, validação de CPF e persistência em
+SQLite. É um projeto de fundamentos de Java focado em orientação a objetos, regras de negócio,
+consistência de dados e testes.
 
 ## Problema resolvido
 
 Regras bancárias são um bom teste de correção: dinheiro não pode se perder em arredondamentos, uma
-transferência recusada precisa deixar as duas contas inalteradas e toda movimentação precisa ser
-rastreável. Este projeto implementa essas regras em Java puro e as verifica com testes automatizados.
+transferência recusada precisa deixar as duas contas inalteradas, toda movimentação precisa ser
+rastreável e os dados precisam sobreviver a um reinício sem nunca ficarem gravados pela metade.
+Este projeto implementa essas regras em Java puro e as verifica com testes automatizados.
 
 ## Funcionalidades
 
@@ -21,74 +23,84 @@ rastreável. Este projeto implementa essas regras em Java puro e as verifica com
 - Valores monetários exatos com `BigDecimal` (duas casas decimais, arredondamento explícito)
 - Rendimento mensal de 0,5% na poupança, aplicado no máximo uma vez por mês-calendário
 - Extrato com tipo, valor com sinal, saldo resultante, data/hora e conta relacionada
+- Validação de CPF (formato, tamanho, dígitos repetidos, dígitos verificadores); um CPF por titular
+- Persistência em um arquivo SQLite local: clientes, contas, saldos, extratos e o mês do rendimento
+  sobrevivem ao reinício
+- Cada operação é gravada de forma atômica; se a gravação falhar, a operação é desfeita
 - Entrada e saída no padrão brasileiro (`100,50` ou `100.50` na entrada; `R$ 1.234,56` na saída)
-- Menu interativo que se recupera de entradas inválidas
 
 ## Tecnologias
 
-- Java 17 (também verificado com Java 21 e 25 na CI)
-- Maven com Maven Wrapper
-- JUnit 6
-- GitHub Actions
+| Tecnologia | Por que é usada |
+|---|---|
+| Java 17 (CI também em 21 e 25) | Linguagem; versão LTS com `record`, `switch` com expressões e *pattern matching* |
+| SQLite + JDBC (`org.xerial:sqlite-jdbc`) | Armazenamento relacional em um único arquivo, sem servidor, com SQL real e transações ACID |
+| Maven + Maven Wrapper | Build, testes e JAR executável (plugin Shade) sem instalar o Maven |
+| JUnit 6 | Testes de unidade e de integração |
+| GitHub Actions + Dependabot | CI a cada push e pull request; atualizações mensais de dependências |
 
 ## Arquitetura
 
-Todas as classes ficam no pacote `com.github.amandadamata.sistemabancario`. Os identificadores do
-código estão em português porque o projeto modela termos bancários brasileiros.
+```mermaid
+flowchart LR
+    Main["Main (CLI)"] --> Banco
+    subgraph domain [Domínio - regras de negócio]
+        Banco --> Conta
+        Conta --> ContaCorrente & ContaPoupanca
+        Banco -. usa .-> Repo[["RepositorioBanco (interface)"]]
+        Conta --> Transacao & Moeda
+        Cliente --> Cpf
+    end
+    subgraph persistencia [persistencia]
+        Sqlite[RepositorioSqlite]
+    end
+    Sqlite -. implementa .-> Repo
+    Sqlite --> DB[(Arquivo SQLite)]
+```
 
 | Classe | Responsabilidade |
 |---|---|
-| `Banco` | Abre contas, controla a numeração e busca contas pelo número |
-| `Conta` | Base abstrata: saldo, depósitos, saques, transferências e histórico |
-| `ContaCorrente` | Sobrescreve o saldo disponível para incluir o limite do cheque especial |
-| `ContaPoupanca` | Acrescenta a regra de rendimento mensal |
+| `Banco` | Porta de entrada única: abre contas, numera, executa as operações e grava o resultado |
+| `Conta`, `ContaCorrente`, `ContaPoupanca` | Saldo, extrato e regras; o cheque especial é uma sobrescrita polimórfica |
 | `Transacao` / `TipoTransacao` | Lançamento imutável do extrato e seu tipo (crédito/débito) |
 | `Moeda` | Conversão, validação, arredondamento e formatação em `R$` |
-| `Cliente` | Titular com nome e CPF obrigatórios |
+| `Cliente`, `Cpf` | Titular; objeto de valor do CPF com validação dos dígitos verificadores |
+| `RepositorioBanco` | Contrato de armazenamento definido pelo domínio |
+| `persistencia.RepositorioSqlite` | Implementação com JDBC e transações SQL |
 | `Main` | Apenas o menu do console, sem regras de negócio |
 
-Principais decisões de projeto (detalhes em [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md), em inglês):
+Os identificadores do código estão em português porque o projeto modela termos bancários brasileiros.
 
-- **`BigDecimal` em vez de `double`**, porque em `double` `0.1 + 0.2` é `0.30000000000000004`.
-  Valores com mais de duas casas decimais são recusados em vez de arredondados silenciosamente.
-- **Arredondamento bancário (`HALF_EVEN`)** somente onde um valor é calculado (o rendimento).
-- **Polimorfismo no cheque especial:** `ContaCorrente` sobrescreve `calcularSaldoDisponivel()`,
-  então o código de saque e transferência é compartilhado.
-- **Validar antes de alterar o estado:** uma transferência recusada não altera nenhuma das contas.
-- **`Clock` injetado:** a regra de rendimento mensal é testada avançando um relógio de teste.
-- **O domínio não imprime:** as contas devolvem dados e a `Main` os formata, o que torna o extrato testável.
+Principais decisões (detalhes em [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md), em inglês):
+
+- **`BigDecimal` na memória, centavos inteiros no banco de dados.** `double` e o tipo `REAL` do
+  SQLite são ponto flutuante binário (`0.1 + 0.2 = 0.30000000000000004`).
+- **Capturar, aplicar, gravar ou desfazer.** O `Banco` guarda o estado das contas envolvidas, aplica
+  a regra e grava todas em uma única transação SQL. Se a gravação falhar, o banco de dados desfaz
+  tudo (*rollback*) e as contas voltam ao estado guardado.
+- **Os dados são conferidos ao carregar.** Cada extrato é refeito e precisa bater com o saldo
+  gravado; dados inconsistentes ou alterados impedem o início, com uma mensagem clara.
+- **O domínio não depende do SQLite.** O `Banco` conversa com a interface `RepositorioBanco`; os
+  testes de regras usam um repositório em memória que pode falhar de propósito.
+- **Dígitos verificadores do CPF, nunca o número completo nas mensagens.** A validação é apenas
+  matemática (veja as limitações).
 
 ## Estrutura do projeto
 
 ```text
 .
-├── .github/
-│   ├── dependabot.yml              # Verificação mensal de atualizações de dependências
-│   └── workflows/ci.yml            # Build e testes com Java 17, 21 e 25
+├── .github/                        # CI (Java 17, 21, 25) e Dependabot
 ├── docs/                           # Arquitetura, decisões de projeto, testes
-├── .mvn/wrapper/                   # Configuração do Maven Wrapper
-├── mvnw, mvnw.cmd                  # Scripts do Maven Wrapper
-├── pom.xml
-└── src/
-    ├── main/java/com/github/amandadamata/sistemabancario/
-    │   ├── Banco.java
-    │   ├── Cliente.java
-    │   ├── Conta.java
-    │   ├── ContaCorrente.java
-    │   ├── ContaPoupanca.java
-    │   ├── Main.java
-    │   ├── Moeda.java
-    │   ├── SaldoInsuficienteException.java
-    │   ├── TipoTransacao.java
-    │   └── Transacao.java
-    └── test/java/com/github/amandadamata/sistemabancario/
-        ├── BancoTest.java
-        ├── ClienteTest.java
-        ├── ContaPoupancaTest.java
-        ├── ContaTest.java
-        ├── MainTest.java
-        ├── MoedaTest.java
-        └── RelogioAjustavel.java       # Relógio de teste que avança sob demanda
+├── src/main/java/com/github/amandadamata/sistemabancario/
+│   ├── Banco.java, Conta.java, ContaCorrente.java, ContaPoupanca.java
+│   ├── Cliente.java, Cpf.java, Moeda.java, Transacao.java, TipoTransacao.java
+│   ├── RepositorioBanco.java, ContaPersistida.java, EstadoConta.java, TipoConta.java
+│   ├── FalhaPersistenciaException.java, SaldoInsuficienteException.java
+│   ├── Main.java
+│   └── persistencia/RepositorioSqlite.java
+├── src/test/java/...               # Testes de unidade, de integração (SQLite) e da CLI
+├── mvnw, mvnw.cmd, .mvn/           # Maven Wrapper
+└── pom.xml
 ```
 
 ## Pré-requisitos
@@ -96,34 +108,42 @@ Principais decisões de projeto (detalhes em [docs/DESIGN_DECISIONS.md](docs/DES
 - JDK 17 ou superior (`java -version`)
 - Acesso à internet no primeiro build, para o Maven Wrapper baixar o Maven e as dependências
 
-Não é necessário ter o Maven instalado.
-
 ## Build e execução (macOS / Linux)
 
 ```bash
 git clone https://github.com/Amandadamata/sistema-bancario-java.git
 cd sistema-bancario-java
 ./mvnw clean package
-java -jar target/sistema-bancario-java-1.0.0.jar
+java -jar target/sistema-bancario-java-1.1.0.jar
 ```
 
 No Windows, use `mvnw.cmd` no lugar de `./mvnw`.
 
+Os dados ficam em `dados/sistema-bancario.db`, relativo à pasta onde o comando é executado. Para
+usar outro arquivo, por exemplo em uma demonstração:
+
+```bash
+SISTEMA_BANCARIO_DB=/tmp/banco-demo.db java -jar target/sistema-bancario-java-1.1.0.jar
+```
+
+Para começar do zero, apague o arquivo do banco de dados. A pasta `dados/` e os arquivos `*.db` são
+ignorados pelo Git.
+
 ## Exemplo de uso
 
-Saída real da aplicação empacotada (linhas do menu omitidas). A conta 1000 é uma poupança que recebe
-um depósito, envia uma transferência, recebe o rendimento do mês e recusa um segundo rendimento no
-mesmo mês:
+Saída real da aplicação empacotada, executada duas vezes sobre o mesmo banco de dados (linhas do
+menu omitidas). Na primeira execução, a conta 1000 (poupança) recebe um depósito, envia uma
+transferência e recebe o rendimento. A segunda execução mostra os dados restaurados e a regra
+mensal ainda respeitada:
 
 ```text
-Rendimento de R$ 4,25 aplicado à conta 1000.
-Erro: O rendimento de 10/2026 já foi aplicado a esta conta.
-
-===== EXTRATO — Conta 1000 (Conta Poupança) — Titular: Ana Souza =====
-[20/10/2026 19:21:04] Depósito                                   +R$ 1.000,00 | Saldo após: R$ 1.000,00
-[20/10/2026 19:21:04] Transferência enviada (para a conta 1001)  -R$ 150,50 | Saldo após: R$ 849,50
-[20/10/2026 19:21:04] Rendimento                                 +R$ 4,25 | Saldo após: R$ 853,75
+Nº 1000 | Conta Poupança | Titular: Ana Souza            | Saldo: R$ 853,75
+Nº 1001 | Conta Corrente | Titular: Bruno Lima           | Saldo: R$ 150,50
+[21/10/2026 11:12:45] Depósito                                   +R$ 1.000,00 | Saldo após: R$ 1.000,00
+[21/10/2026 11:12:45] Transferência enviada (para a conta 1001)  -R$ 150,50 | Saldo após: R$ 849,50
+[21/10/2026 11:12:45] Rendimento                                 +R$ 4,25 | Saldo após: R$ 853,75
 Saldo atual: R$ 853,75
+Erro: O rendimento de 10/2026 já foi aplicado a esta conta.
 ```
 
 ## Testes
@@ -132,44 +152,43 @@ Saldo atual: R$ 853,75
 ./mvnw test
 ```
 
-A suíte cobre:
-
-- aritmética exata de centavos e recusa de valores zero, negativos, nulos ou com casas demais
-- saques e transferências no limite, dentro e além do saldo disponível (com e sem cheque especial)
-- saldos e histórico inalterados após qualquer operação recusada
-- lançamentos do extrato: tipo, valor, saldo resultante, data/hora, conta relacionada e imutabilidade
-- rendimento da poupança: cálculo, regra de uma vez por mês, liberação no mês seguinte e empates `HALF_EVEN`
-- numeração das contas, inclusive aberturas recusadas que não consomem número
-- conversão de valores digitados e formatação em `R$`
-- fluxos completos do menu com entrada simulada, incluindo entradas inválidas e fim da entrada
+A suíte cobre aritmética monetária, operações recusadas que não alteram dados, cheque especial,
+transferências, conteúdo do extrato, rendimento mensal, validação de CPF, numeração e sessões
+completas do menu. Os testes de integração usam um arquivo SQLite real para conferir o reinício,
+uma transferência interrompida no meio da transação SQL, saldos adulterados, arquivos ilegíveis e
+esquemas de versão mais nova. Veja [docs/TESTING.md](docs/TESTING.md).
 
 ## Integração contínua
 
-O GitHub Actions executa `./mvnw --batch-mode verify` com Java 17, 21 e 25 a cada push e pull request
-para a `main`. O workflow tem permissão somente de leitura no repositório.
+O GitHub Actions executa `./mvnw --batch-mode verify` com Java 17, 21 e 25 a cada push e pull
+request para a `main`, com permissão somente de leitura no repositório.
 
 ## Segurança e privacidade
 
-- Os dados existem apenas em memória; nada é gravado em disco ou enviado pela rede.
-- Os testes usam o CPF fictício `000.000.000-00`.
-- O CPF é obrigatório, mas não é validado (formato ou dígitos verificadores).
+- O banco de dados contém nomes e CPFs. É um arquivo local, ignorado pelo Git (`dados/`, `*.db`), e
+  não é criptografado.
+- Mensagens de erro e o `toString()` nunca mostram o CPF completo.
+- Testes e exemplos usam CPFs sintéticos, gerados pelo algoritmo.
+- Os comandos SQL usam parâmetros de `PreparedStatement`, nunca concatenação de texto digitado.
 
 ## Limitações conhecidas
 
-- Sem persistência: as contas são perdidas ao encerrar a aplicação.
-- O rendimento da poupança é uma regra educacional (0,5% por mês-calendário sobre o saldo atual). Não
-  reproduz a regra oficial da poupança (data de aniversário, TR, Selic).
-- Sem juros ou tarifas de cheque especial.
-- Um usuário e um processo; sem autenticação.
+- A validação do CPF é apenas matemática. Ela não comprova identidade, titularidade nem situação
+  cadastral na Receita Federal.
+- O rendimento da poupança é uma regra educacional (0,5% por mês-calendário sobre o saldo atual);
+  não reproduz a regra oficial (data de aniversário, TR, Selic).
+- Sem juros ou tarifas de cheque especial, sem autenticação, sem encerramento de conta.
+- Um processo por vez: duas cópias do programa no mesmo arquivo não são coordenadas.
+- O arquivo do banco de dados não é criptografado.
 
 ## Próximos passos possíveis
 
-- Validação do CPF com dígitos verificadores e mascaramento na exibição
-- Persistência (por exemplo, arquivo ou banco de dados relacional)
+- Encerramento de conta, com regras para o saldo restante
+- Migrações do banco de dados se o esquema mudar (a versão já é guardada em `PRAGMA user_version`)
 
 ## Documentação (em inglês)
 
-- [Arquitetura](docs/ARCHITECTURE.md): diagrama de classes, responsabilidades, fluxo de execução, tratamento de erros
+- [Arquitetura](docs/ARCHITECTURE.md): diagramas, responsabilidades, esquema do banco de dados, fluxo de execução
 - [Decisões de projeto](docs/DESIGN_DECISIONS.md): o que foi escolhido, por quê, alternativas e os testes que verificam
 - [Testes](docs/TESTING.md): como executar, o que cada classe verifica, cobertura
 

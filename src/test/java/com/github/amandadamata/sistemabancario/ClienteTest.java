@@ -16,7 +16,7 @@ class ClienteTest {
     @ValueSource(strings = {" ", "\t"})
     void nomeObrigatorio(String nome) {
         assertThrows(IllegalArgumentException.class,
-                () -> new Cliente(nome, "000.000.000-00"));
+                () -> new Cliente(nome, "246.813.579-28"));
     }
 
     @ParameterizedTest
@@ -28,18 +28,23 @@ class ClienteTest {
     }
 
     @Test
-    void removeEspacosDasExtremidades() {
-        Cliente cliente = new Cliente("  Ana Silva  ", "  000.000.000-00  ");
+    void removeEspacosDasExtremidadesENormalizaOCpf() {
+        Cliente cliente = new Cliente("  Ana Silva  ", "  246.813.579-28  ");
 
         assertAll(
                 () -> assertEquals("Ana Silva", cliente.getNome()),
-                () -> assertEquals("000.000.000-00", cliente.getCpf()));
+                () -> assertEquals("24681357928", cliente.getCpf().digitos()));
+    }
+
+    @Test
+    void cpfInvalidoImpedeACriacaoDoCliente() {
+        assertThrows(IllegalArgumentException.class, () -> new Cliente("Ana Silva", "246.813.579-29"));
     }
 
     @Test
     void toStringNaoExpoeOCpfCompleto() {
-        Cliente cliente = new Cliente("Ana Silva", "123.456.789-01");
+        Cliente cliente = new Cliente("Ana Silva", "246.813.579-28");
 
-        assertEquals("Ana Silva (CPF terminado em 01)", cliente.toString());
+        assertEquals("Ana Silva (CPF ***.***.***-28)", cliente.toString());
     }
 }

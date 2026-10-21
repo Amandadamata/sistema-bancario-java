@@ -1,9 +1,13 @@
 package com.github.amandadamata.sistemabancario;
 
+import com.github.amandadamata.sistemabancario.persistencia.RepositorioSqlite;
+
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -15,10 +19,13 @@ import java.util.Scanner;
  * Interface de linha de comando.
  *
  * <p>Toda regra de negócio fica nas classes de domínio; esta classe apenas lê entradas, chama
- * as operações e exibe os resultados. A entrada e a saída são recebidas no construtor para que
- * o fluxo do menu possa ser testado sem digitar no terminal.
+ * as operações do {@link Banco} e exibe os resultados. A entrada e a saída são recebidas no
+ * construtor para que o fluxo do menu possa ser testado sem digitar no terminal.
  */
 public class Main {
+
+    static final String VARIAVEL_ARQUIVO = "SISTEMA_BANCARIO_DB";
+    static final Path ARQUIVO_PADRAO = Path.of("dados", "sistema-bancario.db");
 
     private static final DateTimeFormatter FORMATO_DATA =
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
@@ -35,7 +42,27 @@ public class Main {
 
     public static void main(String[] args) {
         PrintStream saida = new PrintStream(System.out, true, StandardCharsets.UTF_8);
-        new Main(new Banco(Clock.systemDefaultZone()), System.in, saida).executar();
+        Banco banco;
+        try {
+            Path arquivo = resolverArquivo(System.getenv(VARIAVEL_ARQUIVO));
+            banco = Banco.carregar(Clock.systemDefaultZone(), new RepositorioSqlite(arquivo));
+            saida.println("Dados em: " + arquivo.toAbsolutePath().normalize());
+        } catch (InvalidPathException e) {
+            saida.println("A variável " + VARIAVEL_ARQUIVO + " contém um caminho inválido.");
+            return;
+        } catch (FalhaPersistenciaException e) {
+            saida.println("Não foi possível abrir os dados salvos. O sistema não será iniciado.");
+            saida.println(e.getMessage());
+            return;
+        }
+        new Main(banco, System.in, saida).executar();
+    }
+
+    static Path resolverArquivo(String caminhoConfigurado) {
+        if (caminhoConfigurado == null || caminhoConfigurado.isBlank()) {
+            return ARQUIVO_PADRAO;
+        }
+        return Path.of(caminhoConfigurado.trim());
     }
 
     void executar() {
@@ -79,7 +106,7 @@ public class Main {
 
     private void criarConta() {
         String nome = lerTextoObrigatorio("Nome do titular: ");
-        String cpf = lerTextoObrigatorio("CPF do titular: ");
+        Cpf cpf = lerCpf();
         Cliente cliente = new Cliente(nome, cpf);
 
         saida.println("Tipo de conta: 1 - Corrente | 2 - Poupança");
@@ -91,16 +118,19 @@ public class Main {
             }
         } while (tipo != 1 && tipo != 2);
 
-        Conta conta;
-        if (tipo == 1) {
-            BigDecimal limite = lerValor("Limite do cheque especial: R$ ");
-            conta = banco.abrirContaCorrente(cliente, limite);
-        } else {
-            conta = banco.abrirContaPoupanca(cliente);
+        try {
+            Conta conta;
+            if (tipo == 1) {
+                BigDecimal limite = lerValor("Limite do cheque especial: R$ ");
+                conta = banco.abrirContaCorrente(cliente, limite);
+            } else {
+                conta = banco.abrirContaPoupanca(cliente);
+            }
+            saida.println("Conta criada com sucesso! Número: " + conta.getNumero()
+                    + " (" + conta.getTipoConta() + ")\n");
+        } catch (IllegalArgumentException | FalhaPersistenciaException e) {
+            saida.println("Erro: " + e.getMessage() + "\n");
         }
-
-        saida.println("Conta criada com sucesso! Número: " + conta.getNumero()
-                + " (" + conta.getTipoConta() + ")\n");
     }
 
     private void depositar() {
@@ -111,9 +141,9 @@ public class Main {
 
         BigDecimal valor = lerValor("Valor do depósito: R$ ");
         try {
-            conta.get().depositar(valor);
+            banco.depositar(conta.get().getNumero(), valor);
             saida.println("Depósito realizado com sucesso!\n");
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | FalhaPersistenciaException e) {
             saida.println("Erro: " + e.getMessage() + "\n");
         }
     }
@@ -126,9 +156,9 @@ public class Main {
 
         BigDecimal valor = lerValor("Valor do saque: R$ ");
         try {
-            conta.get().sacar(valor);
+            banco.sacar(conta.get().getNumero(), valor);
             saida.println("Saque realizado com sucesso!\n");
-        } catch (SaldoInsuficienteException | IllegalArgumentException e) {
+        } catch (SaldoInsuficienteException | IllegalArgumentException | FalhaPersistenciaException e) {
             saida.println("Erro: " + e.getMessage() + "\n");
         }
     }
@@ -148,9 +178,9 @@ public class Main {
 
         BigDecimal valor = lerValor("Valor da transferência: R$ ");
         try {
-            origem.get().transferir(destino.get(), valor);
+            banco.transferir(origem.get().getNumero(), destino.get().getNumero(), valor);
             saida.println("Transferência realizada com sucesso!\n");
-        } catch (SaldoInsuficienteException | IllegalArgumentException e) {
+        } catch (SaldoInsuficienteException | IllegalArgumentException | FalhaPersistenciaException e) {
             saida.println("Erro: " + e.getMessage() + "\n");
         }
     }
@@ -215,20 +245,15 @@ public class Main {
             return;
         }
 
-        if (!(conta.get() instanceof ContaPoupanca poupanca)) {
-            saida.println("Essa operação só está disponível para contas poupança.\n");
-            return;
-        }
-
         try {
-            BigDecimal rendimento = poupanca.aplicarRendimento();
+            BigDecimal rendimento = banco.aplicarRendimento(conta.get().getNumero());
             if (rendimento.signum() > 0) {
                 saida.println("Rendimento de " + Moeda.formatar(rendimento)
-                        + " aplicado à conta " + poupanca.getNumero() + ".\n");
+                        + " aplicado à conta " + conta.get().getNumero() + ".\n");
             } else {
                 saida.println("O saldo atual não gera rendimento de pelo menos R$ 0,01.\n");
             }
-        } catch (IllegalStateException e) {
+        } catch (IllegalArgumentException | IllegalStateException | FalhaPersistenciaException e) {
             saida.println("Erro: " + e.getMessage() + "\n");
         }
     }
@@ -262,6 +287,18 @@ public class Main {
                 return Moeda.converter(scanner.nextLine());
             } catch (IllegalArgumentException e) {
                 saida.print(e.getMessage() + " Tente novamente: ");
+            }
+        }
+    }
+
+    /** Repete a pergunta até receber um CPF válido. A mensagem de erro não repete o número. */
+    private Cpf lerCpf() {
+        while (true) {
+            saida.print("CPF do titular: ");
+            try {
+                return Cpf.de(scanner.nextLine());
+            } catch (IllegalArgumentException e) {
+                saida.println(e.getMessage());
             }
         }
     }

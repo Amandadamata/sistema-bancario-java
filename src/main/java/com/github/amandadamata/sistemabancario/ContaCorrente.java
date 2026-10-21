@@ -20,6 +20,12 @@ public final class ContaCorrente extends Conta {
     }
 
     @Override
+    ContaPersistida paraRegistro() {
+        return new ContaPersistida(getNumero(), TipoConta.CORRENTE, getTitular().getNome(),
+                getTitular().getCpf().digitos(), limiteChequeEspecial, getSaldo(), null, getHistorico());
+    }
+
+    @Override
     public String getTipoConta() {
         return "Conta Corrente";
     }

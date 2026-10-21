@@ -246,8 +246,16 @@ class ContaTest {
         return banco.abrirContaPoupanca(cliente("Cliente"));
     }
 
+    /** Cada pessoa dos testes tem um CPF sintético diferente: um CPF pertence a um só titular. */
     private static Cliente cliente(String nome) {
-        return new Cliente(nome, "000.000.000-00");
+        String cpf = switch (nome) {
+            case "Origem" -> "135.792.468-28";
+            case "Destino" -> "802.461.357-35";
+            case "Corrente" -> "314.159.265-90";
+            case "Poupança" -> "271.828.182-05";
+            default -> "246.813.579-28";
+        };
+        return new Cliente(nome, cpf);
     }
 
     private static BigDecimal valor(String texto) {

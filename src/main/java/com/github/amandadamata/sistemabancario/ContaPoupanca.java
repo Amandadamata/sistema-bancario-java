@@ -30,7 +30,7 @@ public final class ContaPoupanca extends Conta {
      * @return valor creditado; zero quando o saldo é pequeno demais para render um centavo
      * @throws IllegalStateException quando o rendimento deste mês já foi aplicado
      */
-    public BigDecimal aplicarRendimento() {
+    BigDecimal aplicarRendimento() {
         YearMonth mesAtual = YearMonth.now(getRelogio());
         if (mesAtual.equals(ultimoMesComRendimento)) {
             throw new IllegalStateException("O rendimento de " + mesAtual.format(FORMATO_MES)
@@ -45,6 +45,29 @@ public final class ContaPoupanca extends Conta {
             ultimoMesComRendimento = mesAtual;
         }
         return rendimento;
+    }
+
+    /** O mês do último rendimento também faz parte do estado que precisa ser desfeito. */
+    @Override
+    EstadoConta capturarEstado() {
+        EstadoConta base = super.capturarEstado();
+        return new EstadoConta(base.saldo(), base.tamanhoHistorico(), ultimoMesComRendimento);
+    }
+
+    @Override
+    void restaurarEstado(EstadoConta estado) {
+        super.restaurarEstado(estado);
+        ultimoMesComRendimento = estado.ultimoMesComRendimento();
+    }
+
+    void restaurarUltimoMesComRendimento(YearMonth mes) {
+        ultimoMesComRendimento = mes;
+    }
+
+    @Override
+    ContaPersistida paraRegistro() {
+        return new ContaPersistida(getNumero(), TipoConta.POUPANCA, getTitular().getNome(),
+                getTitular().getCpf().digitos(), null, getSaldo(), ultimoMesComRendimento, getHistorico());
     }
 
     @Override
