@@ -25,8 +25,13 @@ public final class Cliente {
         return cpf;
     }
 
+    /**
+     * Mostra apenas os dois últimos caracteres do CPF. {@code toString()} costuma aparecer em logs
+     * e mensagens de depuração, onde o documento completo não deve ser exposto.
+     */
     @Override
     public String toString() {
-        return nome + " (CPF: " + cpf + ")";
+        String finalDoCpf = cpf.length() <= 2 ? cpf : cpf.substring(cpf.length() - 2);
+        return nome + " (CPF terminado em " + finalDoCpf + ")";
     }
 }
