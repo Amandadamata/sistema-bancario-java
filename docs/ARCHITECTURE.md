@@ -1,18 +1,20 @@
 # Architecture
 
-This document describes how the banking system is organized and how a request moves through it.
-For the reasons behind each choice, see [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md).
+This document describes how the banking system is organized, how an operation moves through it,
+and how data is stored. For the reasons behind each choice, see
+[DESIGN_DECISIONS.md](DESIGN_DECISIONS.md).
 
 ## Overview
 
-The application has two layers inside a single package:
+| Layer | Classes | Knows about |
+|---|---|---|
+| Console interface | `Main` | `Banco`, domain types for display |
+| Domain | `Banco`, `Conta`, `ContaCorrente`, `ContaPoupanca`, `Cliente`, `Cpf`, `Transacao`, `TipoTransacao`, `Moeda`, exceptions | Only the `RepositorioBanco` interface |
+| Storage contract | `RepositorioBanco`, `ContaPersistida`, `TipoConta` | Domain value types |
+| Persistence | `persistencia.RepositorioSqlite` | JDBC, SQLite, the storage contract |
 
-- **Domain** (`Banco`, `Conta`, `ContaCorrente`, `ContaPoupanca`, `Cliente`, `Transacao`,
-  `TipoTransacao`, `Moeda`, `SaldoInsuficienteException`): business rules and state. No class in
-  this layer reads from the keyboard or prints to the screen.
-- **Console interface** (`Main`): reads input, calls the domain, and formats results.
-
-There is no persistence layer; all data lives in memory for the duration of one run.
+The domain never imports JDBC or SQLite classes. Dependencies point inward: the persistence package
+implements an interface that the domain defines.
 
 ## Class diagram
 
@@ -20,104 +22,116 @@ There is no persistence layer; all data lives in memory for the duration of one 
 classDiagram
     direction LR
     class Main {
-        -Banco banco
-        -Scanner scanner
-        -PrintStream saida
         +main(String[])
         ~executar()
     }
     class Banco {
         -LinkedHashMap contas
-        -Clock relogio
-        -int proximoNumero
+        -RepositorioBanco repositorio
+        +carregar(Clock, RepositorioBanco)$ Banco
         +abrirContaCorrente(Cliente, BigDecimal) ContaCorrente
         +abrirContaPoupanca(Cliente) ContaPoupanca
-        +buscarContaPorNumero(int) Optional~Conta~
-        +listarContas() List~Conta~
+        +depositar(int, BigDecimal)
+        +sacar(int, BigDecimal)
+        +transferir(int, int, BigDecimal)
+        +aplicarRendimento(int) BigDecimal
     }
     class Conta {
         <<abstract>>
-        -int numero
-        -Cliente titular
-        -List~Transacao~ historico
         -BigDecimal saldo
-        +depositar(BigDecimal)
-        +sacar(BigDecimal)
-        +transferir(Conta, BigDecimal)
+        -List~Transacao~ historico
+        ~depositar / sacar / transferir
         #calcularSaldoDisponivel() BigDecimal
-        #creditar(BigDecimal, TipoTransacao)
-        +getHistorico() List~Transacao~
-        +getTipoConta()* String
+        ~capturarEstado() EstadoConta
+        ~restaurarEstado(EstadoConta)
+        ~restaurarHistorico(List, BigDecimal)
+        ~paraRegistro()* ContaPersistida
     }
     class ContaCorrente {
         -BigDecimal limiteChequeEspecial
-        #calcularSaldoDisponivel() BigDecimal
     }
     class ContaPoupanca {
         -YearMonth ultimoMesComRendimento
-        +aplicarRendimento() BigDecimal
+        ~aplicarRendimento() BigDecimal
     }
     class Cliente {
         -String nome
-        -String cpf
+        -Cpf cpf
     }
-    class Transacao {
-        <<record>>
-        TipoTransacao tipo
-        BigDecimal valor
-        BigDecimal saldoResultante
-        LocalDateTime dataHora
-        OptionalInt contaRelacionada
+    class Cpf {
+        -String digitos
+        +de(String)$ Cpf
+        +mascarado() String
     }
-    class TipoTransacao {
-        <<enumeration>>
-        DEPOSITO
-        SAQUE
-        TRANSFERENCIA_ENVIADA
-        TRANSFERENCIA_RECEBIDA
-        RENDIMENTO
+    class RepositorioBanco {
+        <<interface>>
+        +carregar() List~ContaPersistida~
+        +salvar(List~ContaPersistida~)
     }
-    class Moeda {
-        <<utility>>
-        +converter(String) BigDecimal
-        +formatar(BigDecimal) String
-    }
-
+    class RepositorioSqlite
     Main --> Banco
-    Main ..> Moeda
     Banco "1" o-- "*" Conta
+    Banco --> RepositorioBanco
     Conta <|-- ContaCorrente
     Conta <|-- ContaPoupanca
-    Conta --> Cliente : titular
-    Conta "1" *-- "*" Transacao : historico
-    Transacao --> TipoTransacao
-    Conta ..> Moeda : validates amounts
+    Conta --> Cliente
+    Cliente --> Cpf
+    RepositorioSqlite ..|> RepositorioBanco
 ```
 
-## Responsibilities
+`~` marks package-private members: operations that change balances can only be called by `Banco`,
+which is in the same package. `Main` cannot call `conta.depositar(...)` directly and bypass saving.
 
-| Class | Owns | Does not do |
-|---|---|---|
-| `Banco` | The set of accounts and the next account number | Money operations |
-| `Conta` | Balance, history, and the rules shared by every account | Decide how much can be spent (asks `calcularSaldoDisponivel()`) |
-| `ContaCorrente` | The overdraft limit | Anything else; it only changes the available balance |
-| `ContaPoupanca` | The month in which yield was last applied | Withdrawals or transfers (inherited unchanged) |
-| `Transacao` | One immutable statement line | Changing balances |
-| `Moeda` | Parsing, validating, rounding, and formatting money | Business decisions |
-| `Main` | Menu loop, prompts, and output formatting | Business rules |
+## Database schema
 
-## Execution flow
+```mermaid
+erDiagram
+    clientes ||--o{ contas : "owns"
+    contas ||--o{ transacoes : "has"
+    clientes {
+        TEXT cpf PK "11 digits"
+        TEXT nome
+    }
+    contas {
+        INTEGER numero PK
+        TEXT tipo "CORRENTE or POUPANCA"
+        TEXT cliente_cpf FK
+        INTEGER saldo_centavos
+        INTEGER limite_centavos "only CORRENTE"
+        TEXT ultimo_mes_rendimento "YYYY-MM, only POUPANCA"
+    }
+    transacoes {
+        INTEGER conta_numero PK,FK
+        INTEGER sequencia PK "1, 2, 3..."
+        TEXT tipo
+        INTEGER valor_centavos "greater than 0"
+        INTEGER saldo_resultante_centavos
+        TEXT data_hora "ISO-8601"
+        INTEGER conta_relacionada "transfers only"
+    }
+```
 
-1. `Main.main` creates a `Banco` with the system clock and starts the menu with `System.in` and
-   `System.out`.
-2. The menu reads an option with `lerInteiro`. Invalid text is rejected and asked again.
-3. Each option reads the values it needs. Money is read with `lerValor`, which uses
-   `Moeda.converter` and repeats the prompt until the format is valid.
-4. The option calls the domain. Business errors come back as exceptions and are printed as
-   `Erro: <message>`; the menu continues.
-5. Option `0` or the end of the input stream ends the loop.
+- Money columns hold **integer cents** (`R$ 10,50` → `1050`).
+- `CHECK` constraints reject an empty name, a CPF that is not 11 characters long, an unknown account
+  type, a non-positive amount, and a limit on a savings account.
+- Foreign keys are enabled on every connection (`PRAGMA foreign_keys = ON`; SQLite leaves them off by
+  default).
+- The schema version is stored in `PRAGMA user_version` (currently `1`).
 
-### Transfer, step by step
+## Opening the program
+
+1. `Main.main` resolves the data file: `SISTEMA_BANCARIO_DB` or `dados/sistema-bancario.db`.
+2. `new RepositorioSqlite(file)` creates the folder if needed, opens the file, and checks the schema
+   version: `0` (new file) → create tables; `1` → ready; newer → refuse without changes.
+3. `Banco.carregar(clock, repository)` reads every account and rebuilds it:
+   - creates the `Cliente`, which validates the CPF again;
+   - replays the statement from zero: each entry must produce exactly the balance stored in it, and
+     the last one must match the account balance;
+   - restores the last yield month of savings accounts;
+   - sets the next account number to the highest number plus one.
+4. Any problem raises `FalhaPersistenciaException`; `Main` prints the reason and does not start.
+
+## An operation, step by step: a transfer
 
 ```mermaid
 sequenceDiagram
@@ -126,37 +140,48 @@ sequenceDiagram
     participant Banco
     participant Origem as Conta (origin)
     participant Destino as Conta (destination)
+    participant Repo as RepositorioSqlite
+    participant DB as SQLite
 
-    User->>Main: 4, origin, destination, amount
-    Main->>Banco: buscarContaPorNumero(origin)
-    Banco-->>Main: Optional<Conta>
-    Main->>Banco: buscarContaPorNumero(destination)
-    Banco-->>Main: Optional<Conta>
-    Main->>Origem: transferir(destino, valor)
-    Note over Origem: validate destination, amount and<br/>available balance BEFORE any change
-    alt any validation fails
-        Origem-->>Main: IllegalArgumentException / SaldoInsuficienteException
-        Main-->>User: Erro: ...
-    else valid
-        Origem->>Origem: registrar(TRANSFERENCIA_ENVIADA)
-        Origem->>Destino: registrar(TRANSFERENCIA_RECEBIDA)
-        Main-->>User: Transferência realizada com sucesso!
+    User->>Main: option 4, accounts, amount
+    Main->>Banco: transferir(1000, 1001, 40.00)
+    Banco->>Origem: capturarEstado()
+    Banco->>Destino: capturarEstado()
+    Banco->>Origem: transferir(destino, 40.00)
+    Note over Origem,Destino: validates first; debits origin, credits destination (memory)
+    Banco->>Repo: salvar([origin, destination])
+    Repo->>DB: BEGIN (autoCommit = false)
+    Repo->>DB: upsert customers, accounts; insert new statement rows
+    alt every command succeeds
+        Repo->>DB: COMMIT
+        Banco-->>Main: ok
+    else any command fails
+        Repo->>DB: ROLLBACK (nothing was stored)
+        Repo-->>Banco: FalhaPersistenciaException
+        Banco->>Origem: restaurarEstado(captured)
+        Banco->>Destino: restaurarEstado(captured)
+        Banco-->>Main: FalhaPersistenciaException
+        Main-->>User: Erro: ... a operação foi desfeita
     end
 ```
 
+If the business rule refuses the operation (for example, insufficient funds), the exception happens
+before anything changes and nothing is saved.
+
 ## Error handling
 
-| Situation | Exception | Type | Handled in |
-|---|---|---|---|
-| Not enough available balance | `SaldoInsuficienteException` | checked | `Main` prints the message |
-| Zero, negative, null, or over-precise amount | `IllegalArgumentException` | unchecked | `Main` prints the message |
-| Invalid destination (null or same account) | `IllegalArgumentException` | unchecked | `Main` prints the message |
-| Yield already applied this month | `IllegalStateException` | unchecked | `Main` prints the message |
-| Text that is not a number | none (parsing loop) | — | `Main` asks again |
-| End of input | `NoSuchElementException` | unchecked | `Main` ends the session |
+| Situation | Exception | Where it is handled |
+|---|---|---|
+| Not enough available balance | `SaldoInsuficienteException` (checked) | `Main` prints the message |
+| Invalid amount, destination, or account type | `IllegalArgumentException` | `Main` prints the message |
+| Yield already applied this month | `IllegalStateException` | `Main` prints the message |
+| Invalid CPF typed by the user | `IllegalArgumentException` from `Cpf.de` | `Main.lerCpf` asks again |
+| CPF already used by another holder | `IllegalArgumentException` | `Main` prints the message |
+| Saving fails | `FalhaPersistenciaException` | `Banco` undoes the change; `Main` prints the message |
+| Unreadable, inconsistent, or newer database at startup | `FalhaPersistenciaException` | `Main.main` prints it and exits |
+| End of input | `NoSuchElementException` | `Main` ends the session |
 
 ## Time
 
 `Banco` receives a `java.time.Clock` and passes it to every account. Statement timestamps and the
-"once per month" yield rule read the time from that clock, never from the system directly. In
-production it is `Clock.systemDefaultZone()`; tests use a clock they can move forward.
+"once per month" yield rule read the time from that clock; tests use a clock they control.
