@@ -8,7 +8,12 @@ import java.util.List;
 import java.util.Objects;
 import java.util.OptionalInt;
 
-/** Define o estado e as operações comuns às contas bancárias. */
+/**
+ * Define o estado e as operações comuns às contas bancárias.
+ *
+ * <p>As operações que alteram o saldo não são públicas: quem as chama é o {@link Banco}, que
+ * também grava o resultado. Assim, nenhuma movimentação acontece sem ser persistida.
+ */
 public abstract class Conta {
 
     private final int numero;
@@ -30,13 +35,13 @@ public abstract class Conta {
         this.relogio = Objects.requireNonNull(relogio, "O relógio é obrigatório.");
     }
 
-    public void depositar(BigDecimal valor) {
+    void depositar(BigDecimal valor) {
         BigDecimal valorValidado = Moeda.validarValorPositivo(
                 valor, "O valor do depósito deve ser maior que zero.");
         registrar(TipoTransacao.DEPOSITO, valorValidado, OptionalInt.empty());
     }
 
-    public void sacar(BigDecimal valor) throws SaldoInsuficienteException {
+    void sacar(BigDecimal valor) throws SaldoInsuficienteException {
         BigDecimal valorValidado = Moeda.validarValorPositivo(
                 valor, "O valor do saque deve ser maior que zero.");
         garantirSaldoDisponivel(valorValidado, "saque");
@@ -52,7 +57,7 @@ public abstract class Conta {
      * @throws SaldoInsuficienteException quando a conta de origem não possui saldo disponível
      * @throws IllegalArgumentException quando o destino ou o valor são inválidos
      */
-    public void transferir(Conta destino, BigDecimal valor) throws SaldoInsuficienteException {
+    void transferir(Conta destino, BigDecimal valor) throws SaldoInsuficienteException {
         if (destino == null) {
             throw new IllegalArgumentException("Conta de destino inválida.");
         }
@@ -99,6 +104,47 @@ public abstract class Conta {
         historico.add(new Transacao(
                 tipo, valor, saldo, LocalDateTime.now(relogio), contaRelacionada));
     }
+
+    /** Guarda o estado atual, para desfazer a operação se a gravação falhar. */
+    EstadoConta capturarEstado() {
+        return new EstadoConta(saldo, historico.size(), null);
+    }
+
+    /** Volta ao estado capturado, descartando as movimentações feitas depois dele. */
+    void restaurarEstado(EstadoConta estado) {
+        saldo = estado.saldo();
+        historico.subList(estado.tamanhoHistorico(), historico.size()).clear();
+    }
+
+    /**
+     * Recoloca um histórico lido do armazenamento, conferindo cada lançamento.
+     *
+     * <p>O saldo inicial é zero; cada lançamento precisa resultar exatamente no saldo registrado
+     * nele, e o último saldo precisa ser igual ao saldo gravado na conta. Qualquer diferença
+     * indica dados corrompidos ou alterados fora da aplicação.
+     *
+     * @throws FalhaPersistenciaException se o histórico não for consistente
+     */
+    void restaurarHistorico(List<Transacao> lancamentos, BigDecimal saldoGravado) {
+        BigDecimal saldoCalculado = BigDecimal.ZERO.setScale(Moeda.ESCALA);
+        for (Transacao lancamento : lancamentos) {
+            saldoCalculado = saldoCalculado.add(lancamento.valorComSinal());
+            if (saldoCalculado.compareTo(lancamento.saldoResultante()) != 0) {
+                throw new FalhaPersistenciaException("Dados inconsistentes na conta " + numero
+                        + ": um lançamento não corresponde ao saldo registrado.");
+            }
+        }
+        if (saldoCalculado.compareTo(saldoGravado) != 0) {
+            throw new FalhaPersistenciaException("Dados inconsistentes na conta " + numero
+                    + ": o saldo gravado não corresponde ao histórico.");
+        }
+        historico.clear();
+        historico.addAll(lancamentos);
+        saldo = saldoCalculado.setScale(Moeda.ESCALA);
+    }
+
+    /** Converte a conta para o formato gravado pelo repositório. */
+    abstract ContaPersistida paraRegistro();
 
     public abstract String getTipoConta();
 

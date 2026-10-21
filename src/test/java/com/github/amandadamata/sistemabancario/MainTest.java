@@ -1,13 +1,17 @@
 package com.github.amandadamata.sistemabancario;
 
+import com.github.amandadamata.sistemabancario.persistencia.RepositorioSqlite;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -106,19 +110,61 @@ class MainTest {
     }
 
     @Test
+    void cpfDeOutroTitularERecusado() {
+        String saida = executar(
+                "1", "Ana Teste", "246.813.579-28", "2",
+                "1", "Outra Pessoa", "24681357928", "2",
+                "0");
+
+        assertTrue(saida.contains("Erro: Este CPF já está cadastrado para outro titular."), saida);
+    }
+
+    @Test
+    void dadosSobrevivemAoReinicioDoPrograma(@TempDir Path pasta) {
+        Path arquivo = pasta.resolve("banco.db");
+
+        executar(Banco.carregar(RELOGIO, new RepositorioSqlite(arquivo)),
+                "1", "Ana Teste", "246.813.579-28", "2",
+                "2", "1000", "250,75",
+                "0");
+        String segundaExecucao = executar(Banco.carregar(RELOGIO, new RepositorioSqlite(arquivo)),
+                "6",
+                "5", "1000",
+                "0");
+
+        assertAll(
+                () -> assertTrue(segundaExecucao.contains("Nº 1000 | Conta Poupança | Titular: Ana Teste"), segundaExecucao),
+                () -> assertTrue(segundaExecucao.contains("Saldo atual: R$ 250,75"), segundaExecucao),
+                () -> assertTrue(segundaExecucao.contains("Depósito"), segundaExecucao));
+    }
+
+    @Test
+    void arquivoDeDadosPadraoOuConfigurado() {
+        assertAll(
+                () -> assertEquals(Path.of("dados", "sistema-bancario.db"), Main.resolverArquivo(null)),
+                () -> assertEquals(Path.of("dados", "sistema-bancario.db"), Main.resolverArquivo("  ")),
+                () -> assertEquals(Path.of("/tmp/x.db"), Main.resolverArquivo(" /tmp/x.db ")));
+    }
+
+    @Test
     void fimDaEntradaEncerraComSeguranca() {
         String saida = executar("1", "Ana Teste");
 
         assertTrue(saida.contains("Entrada encerrada. Encerrando o sistema com segurança."), saida);
     }
 
+    private static final RelogioAjustavel RELOGIO = RelogioAjustavel.em("2026-10-20T13:00:00Z");
+
     private static String executar(String... linhas) {
+        return executar(new Banco(RELOGIO), linhas);
+    }
+
+    private static String executar(Banco banco, String... linhas) {
         byte[] entrada = (String.join("\n", linhas) + "\n").getBytes(StandardCharsets.UTF_8);
         ByteArrayOutputStream bytesSaida = new ByteArrayOutputStream();
         PrintStream saida = new PrintStream(bytesSaida, true, StandardCharsets.UTF_8);
-        RelogioAjustavel relogio = RelogioAjustavel.em("2026-10-20T13:00:00Z");
 
-        new Main(new Banco(relogio), new ByteArrayInputStream(entrada), saida).executar();
+        new Main(banco, new ByteArrayInputStream(entrada), saida).executar();
 
         return bytesSaida.toString(StandardCharsets.UTF_8);
     }
