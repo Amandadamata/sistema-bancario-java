@@ -66,6 +66,32 @@ class MainTest {
     }
 
     @Test
+    void operacoesRecusadasExtratoVazioEListagem() {
+        String saida = executar(
+                "6",                                                   // listar sem contas
+                "1", "Ana Teste", "000.000.000-00", "1", "50",         // corrente 1000, limite 50
+                "1", "Bruno Teste", "000.000.000-00", "2",             // poupança 1001
+                "5", "1001",                                           // extrato vazio
+                "3", "1000", "50,01",                                  // saque acima do disponível
+                "7", "1000",                                           // rendimento em corrente
+                "7", "1001",                                           // rendimento com saldo zero
+                "4", "1000", "1000", "10",                             // transferência para si mesma
+                "6",
+                "5", "1000",
+                "0");
+
+        assertAll(
+                () -> assertTrue(saida.contains("Nenhuma conta cadastrada."), saida),
+                () -> assertTrue(saida.contains("Nenhuma movimentação registrada ainda."), saida),
+                () -> assertTrue(saida.contains("Erro: Saldo insuficiente. Disponível para saque: R$ 50,00"), saida),
+                () -> assertTrue(saida.contains("Essa operação só está disponível para contas poupança."), saida),
+                () -> assertTrue(saida.contains("O saldo atual não gera rendimento de pelo menos R$ 0,01."), saida),
+                () -> assertTrue(saida.contains("Erro: Não é possível transferir para a mesma conta."), saida),
+                () -> assertTrue(saida.contains("Nº 1001 | Conta Poupança | Titular: Bruno Teste"), saida),
+                () -> assertTrue(saida.contains("Limite do cheque especial: R$ 50,00 | Disponível: R$ 50,00"), saida));
+    }
+
+    @Test
     void fimDaEntradaEncerraComSeguranca() {
         String saida = executar("1", "Ana Teste");
 

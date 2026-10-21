@@ -35,4 +35,11 @@ class ClienteTest {
                 () -> assertEquals("Ana Silva", cliente.getNome()),
                 () -> assertEquals("000.000.000-00", cliente.getCpf()));
     }
+
+    @Test
+    void toStringNaoExpoeOCpfCompleto() {
+        Cliente cliente = new Cliente("Ana Silva", "123.456.789-01");
+
+        assertEquals("Ana Silva (CPF terminado em 01)", cliente.toString());
+    }
 }
