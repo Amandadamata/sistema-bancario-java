@@ -47,29 +47,25 @@ Portuguese because the project models Brazilian banking terms; this documentatio
 | `Cliente` (Customer) | Account holder with required name and CPF |
 | `Main` | Console menu only; no business rules |
 
-Design decisions:
+Key design decisions (details in [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)):
 
-- **`BigDecimal` instead of `double`.** `double` stores binary fractions, so `0.1 + 0.2` becomes
-  `0.30000000000000004`. `BigDecimal` keeps exact decimal values. Amounts with more than two
-  decimal places are rejected instead of silently rounded.
-- **Banker's rounding (`HALF_EVEN`)** is used only where a value is calculated (the yield): a tie
-  such as `5.025` rounds to the even cent, `5.02`, which avoids a systematic upward bias.
-- **Polymorphism for the overdraft.** `Conta` asks `calcularSaldoDisponivel()` how much can be
-  spent; `ContaCorrente` overrides it to add the limit. Withdrawal and transfer code is shared.
-- **Validate first, then change state.** A transfer checks the destination, the amount, and the
-  available balance before touching either balance, so a rejected transfer changes nothing.
-- **Injected `Clock`.** Timestamps and the "once per month" yield rule depend on time; tests use
-  a controllable clock instead of the real date.
-- **Numbering per `Banco` instance.** Each bank keeps its own sequence starting at 1000, and a
-  rejected account does not consume a number.
-- **No printing in the domain.** Accounts return data (`getHistorico()`); `Main` decides how to
-  display it. This is what makes the statement testable.
+- **`BigDecimal` instead of `double`**, because `0.1 + 0.2` in `double` is `0.30000000000000004`.
+  Amounts with more than two decimal places are rejected instead of silently rounded.
+- **Banker's rounding (`HALF_EVEN`)** only where a value is calculated (the yield).
+- **Polymorphism for the overdraft:** `ContaCorrente` overrides `calcularSaldoDisponivel()`, so
+  withdrawal and transfer code is shared.
+- **Validate first, then change state:** a rejected transfer changes neither account.
+- **Injected `Clock`:** the monthly yield rule is tested by moving a test clock forward.
+- **No printing in the domain:** accounts return data; `Main` formats it, so the statement is testable.
 
 ## Project structure
 
 ```text
 .
-├── .github/workflows/ci.yml        # Build and test on Java 17 and 21
+├── .github/
+│   ├── dependabot.yml              # Monthly dependency update checks
+│   └── workflows/ci.yml            # Build and test on Java 17 and 21
+├── docs/                           # Architecture, design decisions, testing
 ├── .mvn/wrapper/                   # Maven Wrapper configuration
 ├── mvnw, mvnw.cmd                  # Maven Wrapper scripts
 ├── pom.xml
@@ -172,6 +168,12 @@ to `main`. The workflow has read-only repository permissions.
 
 - CPF validation with check digits and masking in displayed output
 - Persistence (for example, a file or a relational database)
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md): class diagram, responsibilities, execution flow, error handling
+- [Design decisions](docs/DESIGN_DECISIONS.md): what was chosen, why, alternatives, and the tests that verify it
+- [Testing](docs/TESTING.md): how to run tests, what each class verifies, coverage
 
 ## License
 

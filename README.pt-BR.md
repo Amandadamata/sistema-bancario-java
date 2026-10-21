@@ -47,31 +47,25 @@ código estão em português porque o projeto modela termos bancários brasileir
 | `Cliente` | Titular com nome e CPF obrigatórios |
 | `Main` | Apenas o menu do console, sem regras de negócio |
 
-Decisões de projeto:
+Principais decisões de projeto (detalhes em [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md), em inglês):
 
-- **`BigDecimal` em vez de `double`.** O `double` armazena frações binárias, então `0.1 + 0.2` vira
-  `0.30000000000000004`. O `BigDecimal` mantém valores decimais exatos. Valores com mais de duas
-  casas decimais são recusados em vez de arredondados silenciosamente.
-- **Arredondamento bancário (`HALF_EVEN`)** é usado somente onde um valor é calculado (o rendimento):
-  um empate como `5,025` vai para o centavo par, `5,02`, o que evita uma tendência sistemática de
-  arredondar para cima.
-- **Polimorfismo no cheque especial.** `Conta` consulta `calcularSaldoDisponivel()` para saber quanto
-  pode ser usado; `ContaCorrente` sobrescreve o método para somar o limite. O código de saque e
-  transferência é compartilhado.
-- **Validar antes de alterar o estado.** A transferência confere o destino, o valor e o saldo
-  disponível antes de mexer em qualquer saldo, então uma transferência recusada não altera nada.
-- **`Clock` injetado.** As datas do extrato e a regra de "uma vez por mês" dependem do tempo; os
-  testes usam um relógio controlável em vez da data real.
-- **Numeração por instância de `Banco`.** Cada banco tem sua própria sequência, a partir de 1000, e
-  uma abertura recusada não consome número.
-- **O domínio não imprime.** As contas devolvem dados (`getHistorico()`) e a `Main` decide como
-  exibi-los. É isso que torna o extrato testável.
+- **`BigDecimal` em vez de `double`**, porque em `double` `0.1 + 0.2` é `0.30000000000000004`.
+  Valores com mais de duas casas decimais são recusados em vez de arredondados silenciosamente.
+- **Arredondamento bancário (`HALF_EVEN`)** somente onde um valor é calculado (o rendimento).
+- **Polimorfismo no cheque especial:** `ContaCorrente` sobrescreve `calcularSaldoDisponivel()`,
+  então o código de saque e transferência é compartilhado.
+- **Validar antes de alterar o estado:** uma transferência recusada não altera nenhuma das contas.
+- **`Clock` injetado:** a regra de rendimento mensal é testada avançando um relógio de teste.
+- **O domínio não imprime:** as contas devolvem dados e a `Main` os formata, o que torna o extrato testável.
 
 ## Estrutura do projeto
 
 ```text
 .
-├── .github/workflows/ci.yml        # Build e testes com Java 17 e 21
+├── .github/
+│   ├── dependabot.yml              # Verificação mensal de atualizações de dependências
+│   └── workflows/ci.yml            # Build e testes com Java 17 e 21
+├── docs/                           # Arquitetura, decisões de projeto, testes
 ├── .mvn/wrapper/                   # Configuração do Maven Wrapper
 ├── mvnw, mvnw.cmd                  # Scripts do Maven Wrapper
 ├── pom.xml
@@ -172,6 +166,12 @@ para a `main`. O workflow tem permissão somente de leitura no repositório.
 
 - Validação do CPF com dígitos verificadores e mascaramento na exibição
 - Persistência (por exemplo, arquivo ou banco de dados relacional)
+
+## Documentação (em inglês)
+
+- [Arquitetura](docs/ARCHITECTURE.md): diagrama de classes, responsabilidades, fluxo de execução, tratamento de erros
+- [Decisões de projeto](docs/DESIGN_DECISIONS.md): o que foi escolhido, por quê, alternativas e os testes que verificam
+- [Testes](docs/TESTING.md): como executar, o que cada classe verifica, cobertura
 
 ## Licença
 
