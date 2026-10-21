@@ -21,7 +21,7 @@ public final class Cpf {
     }
 
     /**
-     * Valida e normaliza um CPF digitado com ou sem pontuação ("123.456.789-09" ou "12345678909").
+     * Valida e normaliza um CPF digitado com ou sem pontuação ("246.813.579-28" ou "24681357928", um CPF sintético).
      *
      * @throws IllegalArgumentException com uma mensagem que não repete o número informado
      */
