@@ -1,114 +1,100 @@
-# Banking System in Java
+<img width="100%" src="https://capsule-render.vercel.app/api?type=rect&color=A8D5BA&height=120&text=Banking%20System&fontSize=36&fontColor=1B4332&fontAlignY=40&desc=Account%20rules%20in%20plain%20Java%2C%20exact%20to%20the%20cent&descSize=16&descAlignY=75" alt="Banking System"/>
+
+**English** · [Português](README.pt-BR.md)
 
 [![Java CI](https://github.com/Amandadamata/sistema-bancario-java/actions/workflows/ci.yml/badge.svg)](https://github.com/Amandadamata/sistema-bancario-java/actions/workflows/ci.yml)
+![Java 17](https://img.shields.io/badge/Java-17-A8D5BA?style=flat-square&logo=openjdk&logoColor=white&labelColor=1B4332)
+![JUnit 6](https://img.shields.io/badge/JUnit%206-135%20tests-A8D5BA?style=flat-square&logo=junit5&logoColor=white&labelColor=1B4332)
+![Maven](https://img.shields.io/badge/Maven-wrapper-A8D5BA?style=flat-square&logo=apachemaven&logoColor=white&labelColor=1B4332)
+![SQLite](https://img.shields.io/badge/SQLite-JDBC-A8D5BA?style=flat-square&logo=sqlite&logoColor=white&labelColor=1B4332)
+[![License: MIT](https://img.shields.io/badge/license-MIT-A8D5BA?style=flat-square&labelColor=1B4332)](LICENSE)
 
-**English** · [Português (Brasil)](README.pt-BR.md)
+A Java 17 command-line banking app with checking and savings accounts, backed by SQLite.
 
-A command-line banking application with checking and savings accounts, exact money arithmetic,
-overdraft limits, transfers, a monthly savings yield, CPF validation, and SQLite persistence.
-It is a Java fundamentals project focused on object-oriented design, business rules, data
-consistency, and tests.
+## The problem
 
-## Problem it solves
+A checking account can go into overdraft up to a limit. A savings account can't, but it earns interest, and only once a month. A transfer has to fail cleanly when there isn't enough money, without leaving either account half-updated. The math also has to be exact, and in Java `0.1 + 0.2` with `double` gives `0.30000000000000004`.
 
-Banking rules are a good test of correctness: money must never be lost to rounding, a failed
-transfer must leave both accounts unchanged, every movement must be traceable, and data must
-survive a restart without ever being stored half-written. This project implements those rules in
-plain Java and verifies them with automated tests.
+## The solution
+
+This app models those rules in plain Java. You open accounts, deposit, withdraw, transfer and check a statement from a menu in the terminal. Amounts use `BigDecimal`, so every cent is exact. Each operation is saved to a SQLite file in a single SQL transaction: either everything is stored, or nothing is, and the account in memory goes back to how it was.
+
+## Demo
+
+![Terminal demo: a deposit, a withdrawal that uses the overdraft, a refused withdrawal, a transfer and the statement](docs/assets/demo.gif)
+
+*Account 1000 is a checking account with a R$ 200 overdraft limit. It gets R$ 100, then pays R$ 250 using the overdraft. A further R$ 100 is refused, because only R$ 50 is left. The R$ 50 transfer goes through, and the statement shows every movement with the balance after it. (The app's interface is in Portuguese.)*
 
 ## Features
 
-- Open checking accounts (with an overdraft limit) and savings accounts
-- Deposits, withdrawals, and transfers between accounts, including overdraft use
-- Exact monetary values with `BigDecimal` (two decimal places, explicit rounding)
-- Monthly savings yield of 0.5%, applied at most once per calendar month
-- Statement with type, signed amount, resulting balance, timestamp, and related account
-- CPF validation (format, length, repeated digits, check digits); one CPF per account holder
-- Persistence in a local SQLite file: customers, accounts, balances, statements, and the yield month
-  survive a restart
-- Every operation is saved atomically; if saving fails, the operation is undone
-- Brazilian number input and output (`100,50` or `100.50` in; `R$ 1.234,56` out)
+- Checking accounts with an overdraft limit, and savings accounts.
+- Deposits, withdrawals and transfers between accounts.
+- Monthly savings interest of 0.5%, applied at most once per calendar month.
+- Statement with type, signed amount, resulting balance, date and the other account in a transfer.
+- CPF (Brazilian tax ID) check-digit validation, with one CPF per account holder.
+- Data saved in SQLite, so accounts and statements survive a restart.
+- Brazilian number format: you can type `100,50` or `100.50`, and you see `R$ 1.234,56`.
 
-## Technologies
+## What this project shows
 
-| Technology | Why it is used |
+| Skill | Where / how it shows up |
 |---|---|
-| Java 17 (CI also on 21 and 25) | Language; LTS version with `record`, `switch` expressions and pattern matching |
-| SQLite + JDBC (`org.xerial:sqlite-jdbc`) | Relational storage in a single file, no server to install, real SQL and ACID transactions |
-| Maven + Maven Wrapper | Build, tests, and an executable JAR (Shade plugin) without installing Maven |
-| JUnit 6 | Unit and integration tests |
-| GitHub Actions + Dependabot | CI on every push and pull request; monthly dependency updates |
+| Abstraction | `Conta` is an `abstract` class that holds the balance, the statement and the shared rules. `RepositorioBanco` is an interface, so `Banco` doesn't know SQLite exists. |
+| Inheritance | `ContaCorrente` and `ContaPoupanca` extend `Conta`. The savings account adds `aplicarRendimento()`, which remembers the last month it paid interest. |
+| Polymorphism | `ContaCorrente` overrides `calcularSaldoDisponivel()` to add the overdraft limit. `Conta` checks the available balance without asking which type of account it is. |
+| Encapsulation | There's no `setSaldo`. The balance only changes through operations that also write a statement line, and `getHistorico()` returns a copy with `List.copyOf`. |
+| Custom exceptions | `SaldoInsuficienteException` is thrown by `Conta` when a withdrawal or transfer goes over the available balance. `FalhaPersistenciaException` reports a failed save. |
+| SQL and transactions | `RepositorioSqlite` turns off auto-commit, saves every account involved, then calls `commit()` or `rollback()`. Queries use `PreparedStatement`, and foreign keys are switched on. |
+| Parameterized tests | 13 `@ParameterizedTest` methods. For example, `ContaTest` sends `0`, `-10.00`, `0.001`, `10.005` and `null` to every operation and checks that all are refused and no balance changes. |
+| Automated tests and CI | 135 JUnit 6 tests in 9 classes, including integration tests with a real SQLite file. [`ci.yml`](.github/workflows/ci.yml) runs them on Java 17, 21 and 25 for every push and pull request. |
 
-## Architecture
+## How it works
 
 ```mermaid
-flowchart LR
-    Main["Main (CLI)"] --> Banco
-    subgraph domain [Domain - business rules]
-        Banco --> Conta
-        Conta --> ContaCorrente & ContaPoupanca
-        Banco -. uses .-> Repo[["RepositorioBanco (interface)"]]
-        Conta --> Transacao & Moeda
-        Cliente --> Cpf
-    end
-    subgraph persistencia [persistencia]
-        Sqlite[RepositorioSqlite]
-    end
-    Sqlite -. implements .-> Repo
-    Sqlite --> DB[(SQLite file)]
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#D8F3DC','primaryTextColor':'#1B4332','primaryBorderColor':'#2D6A4F','lineColor':'#2D6A4F','secondaryColor':'#A8D5BA','tertiaryColor':'#FFFFFF'}}}%%
+classDiagram
+    direction LR
+    class Conta {
+      <<abstract>>
+      -saldo : BigDecimal
+      -historico : List~Transacao~
+      ~depositar()
+      ~sacar()
+      ~transferir()
+      #calcularSaldoDisponivel()
+    }
+    class ContaCorrente {
+      -limiteChequeEspecial
+      #calcularSaldoDisponivel()
+    }
+    class ContaPoupanca {
+      -ultimoMesComRendimento
+      ~aplicarRendimento()
+    }
+    class RepositorioBanco {
+      <<interface>>
+    }
+    Conta <|-- ContaCorrente
+    Conta <|-- ContaPoupanca
+    Banco --> Conta
+    Banco --> RepositorioBanco
+    RepositorioBanco <|.. RepositorioSqlite
 ```
 
-| Class | Responsibility |
-|---|---|
-| `Banco` (Bank) | Single entry point: opens accounts, numbers them, runs operations and saves the result |
-| `Conta`, `ContaCorrente`, `ContaPoupanca` | Balance, statement and rules; the overdraft is a polymorphic override |
-| `Transacao` / `TipoTransacao` | Immutable statement entry and its credit/debit type |
-| `Moeda` (Money) | Money parsing, validation, rounding, and `R$` formatting |
-| `Cliente`, `Cpf` | Account holder; CPF value object with check-digit validation |
-| `RepositorioBanco` | Storage contract defined by the domain |
-| `persistencia.RepositorioSqlite` | JDBC implementation with SQL transactions |
-| `Main` | Console menu only; no business rules |
+`Main` only shows the menu and reads what you type. Every action goes through `Banco`, which follows the same three steps each time. First it takes a snapshot of the accounts involved. Then it asks the account to apply the rule: `Conta` checks the amount, asks `calcularSaldoDisponivel()` how much can be spent, and throws `SaldoInsuficienteException` if it's not enough. Last, it saves everything in one SQL transaction, and if the save fails, the accounts go back to the snapshot. When the app starts, it replays each statement and checks that it adds up to the stored balance.
 
-Code identifiers are in Portuguese because the project models Brazilian banking terms.
+## Technical decisions
 
-Key design decisions (details in [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md)):
+- **I chose `BigDecimal` instead of `double`** because `double` can't store most decimal values exactly. In the database, money is stored as whole cents (`INTEGER`) for the same reason.
+- **I chose SQLite instead of a database server** because it's a single file with real SQL and transactions, and nothing extra to install to run the project.
+- **I chose to make the overdraft an override instead of an `if` on the account type.** Adding a new kind of account means writing a new class, not editing the rules in `Conta`.
+- **I chose a checked exception for insufficient balance** because it's an expected situation, and the compiler forces the menu to handle it with a clear message.
 
-- **`BigDecimal` in memory, integer cents in the database.** `double` and SQLite `REAL` are binary
-  floating point (`0.1 + 0.2 = 0.30000000000000004`).
-- **Capture, apply, save or undo.** `Banco` captures the state of the accounts involved, applies the
-  rule, and saves all of them in one SQL transaction. If saving fails, the database rolls back and
-  the accounts return to the captured state.
-- **Data is checked when loaded.** Each statement is replayed and must match the stored balance;
-  inconsistent or tampered data stops the program with a clear message.
-- **The domain does not depend on SQLite.** `Banco` talks to the `RepositorioBanco` interface; rule
-  tests use an in-memory repository that can fail on purpose.
-- **CPF check digits, never the full number in messages.** Validation is mathematical only (see
-  limitations).
+More details and the alternatives I considered are in [DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md).
 
-## Project structure
+## Running it
 
-```text
-.
-├── .github/                        # CI workflow (Java 17, 21, 25) and Dependabot
-├── docs/                           # Architecture, design decisions, testing
-├── src/main/java/com/github/amandadamata/sistemabancario/
-│   ├── Banco.java, Conta.java, ContaCorrente.java, ContaPoupanca.java
-│   ├── Cliente.java, Cpf.java, Moeda.java, Transacao.java, TipoTransacao.java
-│   ├── RepositorioBanco.java, ContaPersistida.java, EstadoConta.java, TipoConta.java
-│   ├── FalhaPersistenciaException.java, SaldoInsuficienteException.java
-│   ├── Main.java
-│   └── persistencia/RepositorioSqlite.java
-├── src/test/java/...               # Unit, integration (SQLite) and CLI tests
-├── mvnw, mvnw.cmd, .mvn/           # Maven Wrapper
-└── pom.xml
-```
-
-## Prerequisites
-
-- JDK 17 or newer (`java -version`)
-- Internet access on the first build, so the Maven Wrapper can download Maven and dependencies
-
-## Build and run (macOS / Linux)
+You need Java 17 or newer. The first build downloads Maven and the dependencies through the Maven Wrapper. I built it in IntelliJ IDEA, but any terminal works.
 
 ```bash
 git clone https://github.com/Amandadamata/sistema-bancario-java.git
@@ -117,82 +103,46 @@ cd sistema-bancario-java
 java -jar target/sistema-bancario-java-1.1.0.jar
 ```
 
-On Windows, use `mvnw.cmd` instead of `./mvnw`.
-
-Data is stored in `dados/sistema-bancario.db`, relative to the folder where you run the command.
-To use another file, for example for a demo:
-
-```bash
-SISTEMA_BANCARIO_DB=/tmp/bank-demo.db java -jar target/sistema-bancario-java-1.1.0.jar
-```
-
-To start from scratch, delete the database file. The `dados/` folder and `*.db` files are ignored by
-Git.
-
-## Usage example
-
-Real output from the packaged application, run twice on the same database (menu lines omitted).
-In the first run, account 1000 (savings) receives a deposit, sends a transfer, and earns its yield.
-The second run shows the data restored and the monthly rule still enforced:
-
-```text
-Nº 1000 | Conta Poupança | Titular: Ana Souza            | Saldo: R$ 853,75
-Nº 1001 | Conta Corrente | Titular: Bruno Lima           | Saldo: R$ 150,50
-[21/10/2026 11:12:45] Depósito                                   +R$ 1.000,00 | Saldo após: R$ 1.000,00
-[21/10/2026 11:12:45] Transferência enviada (para a conta 1001)  -R$ 150,50 | Saldo após: R$ 849,50
-[21/10/2026 11:12:45] Rendimento                                 +R$ 4,25 | Saldo após: R$ 853,75
-Saldo atual: R$ 853,75
-Erro: O rendimento de 10/2026 já foi aplicado a esta conta.
-```
-
-The user interface is in Portuguese.
-
-## Tests
-
 ```bash
 ./mvnw test
 ```
 
-The suite covers money arithmetic, every rejected operation leaving data unchanged, overdraft,
-transfers, statement contents, the monthly yield, CPF validation, numbering, and full menu
-sessions. Integration tests use a real SQLite file to check restart round trips, a transfer
-interrupted in the middle of the SQL transaction, tampered balances, unreadable files, and newer
-schema versions. See [docs/TESTING.md](docs/TESTING.md).
+On Windows, use `mvnw.cmd`. Data goes to `dados/sistema-bancario.db`. To use another file, set `SISTEMA_BANCARIO_DB=/tmp/bank-demo.db`. The demo GIF can be recorded again with [VHS](https://github.com/charmbracelet/vhs): `vhs docs/assets/demo.tape`.
 
-## Continuous integration
+## Project structure
 
-GitHub Actions runs `./mvnw --batch-mode verify` on Java 17, 21, and 25 for every push and pull
-request to `main`, with read-only repository permissions.
+```text
+src/main/java/com/github/amandadamata/sistemabancario/
+├── Banco.java                  # entry point for every operation; snapshot, apply, save or undo
+├── Conta.java                  # abstract account: balance, statement, shared rules
+├── ContaCorrente.java          # overdraft
+├── ContaPoupanca.java          # monthly interest
+├── Cliente.java, Cpf.java      # account holder and CPF validation
+├── Moeda.java, Transacao.java  # money parsing/formatting and statement entries
+├── RepositorioBanco.java       # storage contract
+├── persistencia/RepositorioSqlite.java  # JDBC + SQL transactions
+└── Main.java                   # console menu only
+src/test/                       # 135 tests: unit, SQLite integration and menu sessions
+docs/                           # architecture, design decisions, testing
+```
 
-## Security and privacy
+Class and method names are in Portuguese because the project uses Brazilian banking terms.
 
-- The database contains names and CPFs. It is a local file, ignored by Git (`dados/`, `*.db`), and
-  it is not encrypted.
-- Error messages and `toString()` never show a full CPF.
-- Tests and examples use synthetic CPFs generated by the algorithm.
-- SQL commands use `PreparedStatement` parameters, never string concatenation of user input.
+## Limits and what's next
 
-## Known limitations
+What it doesn't do yet:
 
-- CPF validation is mathematical only. It does not prove identity, ownership, or registration
-  status with the Brazilian Federal Revenue (Receita Federal).
-- The savings yield is an educational rule (0.5% per calendar month on the current balance); it does
-  not reproduce the official Brazilian savings rule (anniversary date, TR, Selic).
-- No overdraft interest or fees, no authentication, no account closing.
-- One process at a time: two copies of the program on the same file are not coordinated.
-- The database file is not encrypted.
+- CPF validation is mathematical only. It doesn't prove anyone's identity.
+- The 0.5% interest is a simplified rule, not the official Brazilian savings formula.
+- No login, overdraft fees or account closing. One process uses the database at a time, and the file isn't encrypted.
 
-## Possible next steps
+Next steps I'm planning:
 
-- Account closing with rules for remaining balances
-- Database migrations if the schema changes (the version is already stored in `PRAGMA user_version`)
+- Expose the accounts through a REST API with Spring Boot, which I'm studying now.
+- Account closing, with rules for any balance left.
+- Schema migrations (the version is already stored in `PRAGMA user_version`).
 
-## Documentation
+## Author
 
-- [Architecture](docs/ARCHITECTURE.md): diagrams, responsibilities, database schema, execution flow
-- [Design decisions](docs/DESIGN_DECISIONS.md): what was chosen, why, alternatives, and the tests that verify it
-- [Testing](docs/TESTING.md): how to run tests, what each class verifies, coverage
-
-## License
-
-[MIT](LICENSE)
+**Amanda da Mata** · Back-End developer in training · Java and Python  
+[LinkedIn](https://www.linkedin.com/in/amanda-da-mata-492106288) · [amandadamataprofissional@gmail.com](mailto:amandadamataprofissional@gmail.com) · [GitHub](https://github.com/Amandadamata)

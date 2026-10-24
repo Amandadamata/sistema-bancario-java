@@ -1,114 +1,100 @@
-# Sistema Bancário em Java
+<img width="100%" src="https://capsule-render.vercel.app/api?type=rect&color=A8D5BA&height=120&text=Sistema%20Banc%C3%A1rio&fontSize=36&fontColor=1B4332&fontAlignY=40&desc=Regras%20de%20conta%20em%20Java%2C%20exatas%20at%C3%A9%20o%20centavo&descSize=16&descAlignY=75" alt="Sistema Bancário"/>
+
+[English](README.md) · **Português**
 
 [![Java CI](https://github.com/Amandadamata/sistema-bancario-java/actions/workflows/ci.yml/badge.svg)](https://github.com/Amandadamata/sistema-bancario-java/actions/workflows/ci.yml)
+![Java 17](https://img.shields.io/badge/Java-17-A8D5BA?style=flat-square&logo=openjdk&logoColor=white&labelColor=1B4332)
+![JUnit 6](https://img.shields.io/badge/JUnit%206-135%20testes-A8D5BA?style=flat-square&logo=junit5&logoColor=white&labelColor=1B4332)
+![Maven](https://img.shields.io/badge/Maven-wrapper-A8D5BA?style=flat-square&logo=apachemaven&logoColor=white&labelColor=1B4332)
+![SQLite](https://img.shields.io/badge/SQLite-JDBC-A8D5BA?style=flat-square&logo=sqlite&logoColor=white&labelColor=1B4332)
+[![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-A8D5BA?style=flat-square&labelColor=1B4332)](LICENSE)
 
-[English](README.md) · **Português (Brasil)**
+Sistema bancário de linha de comando em Java 17, com conta corrente e poupança e dados em SQLite.
 
-Aplicação de linha de comando com contas corrente e poupança, aritmética monetária exata, cheque
-especial, transferências, rendimento mensal da poupança, validação de CPF e persistência em
-SQLite. É um projeto de fundamentos de Java focado em orientação a objetos, regras de negócio,
-consistência de dados e testes.
+## O problema
 
-## Problema resolvido
+A conta corrente pode ficar negativa até um limite. A poupança não pode, mas rende, e só uma vez por mês. Uma transferência precisa falhar sem deixar nenhuma das duas contas pela metade quando falta dinheiro. As contas também precisam ser exatas, e em Java `0.1 + 0.2` com `double` dá `0.30000000000000004`.
 
-Regras bancárias são um bom teste de correção: dinheiro não pode se perder em arredondamentos, uma
-transferência recusada precisa deixar as duas contas inalteradas, toda movimentação precisa ser
-rastreável e os dados precisam sobreviver a um reinício sem nunca ficarem gravados pela metade.
-Este projeto implementa essas regras em Java puro e as verifica com testes automatizados.
+## A solução
+
+Este sistema modela essas regras em Java puro. Pelo menu no terminal, você abre contas, deposita, saca, transfere e consulta o extrato. Os valores usam `BigDecimal`, então cada centavo é exato. Cada operação é salva num arquivo SQLite em uma única transação SQL: ou tudo é gravado, ou nada é, e a conta em memória volta a ser como era.
+
+## Demonstração
+
+![Demonstração no terminal: depósito, saque usando o cheque especial, saque recusado, transferência e extrato](docs/assets/demo.gif)
+
+*A conta 1000 é uma conta corrente com R$ 200 de cheque especial. Ela recebe R$ 100 e depois paga R$ 250 usando o limite. Um novo saque de R$ 100 é recusado, porque só restam R$ 50. A transferência de R$ 50 passa, e o extrato mostra cada movimentação com o saldo depois dela.*
 
 ## Funcionalidades
 
-- Abertura de contas corrente (com limite de cheque especial) e poupança
-- Depósitos, saques e transferências entre contas, inclusive usando o cheque especial
-- Valores monetários exatos com `BigDecimal` (duas casas decimais, arredondamento explícito)
-- Rendimento mensal de 0,5% na poupança, aplicado no máximo uma vez por mês-calendário
-- Extrato com tipo, valor com sinal, saldo resultante, data/hora e conta relacionada
-- Validação de CPF (formato, tamanho, dígitos repetidos, dígitos verificadores); um CPF por titular
-- Persistência em um arquivo SQLite local: clientes, contas, saldos, extratos e o mês do rendimento
-  sobrevivem ao reinício
-- Cada operação é gravada de forma atômica; se a gravação falhar, a operação é desfeita
-- Entrada e saída no padrão brasileiro (`100,50` ou `100.50` na entrada; `R$ 1.234,56` na saída)
+- Conta corrente com limite de cheque especial e conta poupança.
+- Depósito, saque e transferência entre contas.
+- Rendimento mensal de 0,5% na poupança, aplicado no máximo uma vez por mês.
+- Extrato com tipo, valor com sinal, saldo resultante, data e a outra conta envolvida na transferência.
+- Validação dos dígitos verificadores do CPF, com um CPF por titular.
+- Dados salvos em SQLite, então contas e extratos continuam lá depois de fechar o programa.
+- Formato brasileiro: dá para digitar `100,50` ou `100.50`, e o valor aparece como `R$ 1.234,56`.
 
-## Tecnologias
+## O que este projeto mostra
 
-| Tecnologia | Por que é usada |
+| Habilidade | Onde e como aparece |
 |---|---|
-| Java 17 (CI também em 21 e 25) | Linguagem; versão LTS com `record`, `switch` com expressões e *pattern matching* |
-| SQLite + JDBC (`org.xerial:sqlite-jdbc`) | Armazenamento relacional em um único arquivo, sem servidor, com SQL real e transações ACID |
-| Maven + Maven Wrapper | Build, testes e JAR executável (plugin Shade) sem instalar o Maven |
-| JUnit 6 | Testes de unidade e de integração |
-| GitHub Actions + Dependabot | CI a cada push e pull request; atualizações mensais de dependências |
+| Abstração | `Conta` é uma classe `abstract` que guarda o saldo, o extrato e as regras comuns. `RepositorioBanco` é uma interface, então o `Banco` nem sabe que o SQLite existe. |
+| Herança | `ContaCorrente` e `ContaPoupanca` estendem `Conta`. A poupança acrescenta `aplicarRendimento()`, que lembra o último mês em que rendeu. |
+| Polimorfismo | `ContaCorrente` sobrescreve `calcularSaldoDisponivel()` para somar o cheque especial. `Conta` confere o saldo disponível sem perguntar que tipo de conta ela é. |
+| Encapsulamento | Não existe `setSaldo`. O saldo só muda por operações que também escrevem uma linha no extrato, e `getHistorico()` devolve uma cópia com `List.copyOf`. |
+| Exceções personalizadas | `SaldoInsuficienteException` é lançada pela `Conta` quando um saque ou transferência passa do saldo disponível. `FalhaPersistenciaException` avisa que a gravação falhou. |
+| SQL e transações | O `RepositorioSqlite` desliga o auto-commit, grava todas as contas envolvidas e depois chama `commit()` ou `rollback()`. As consultas usam `PreparedStatement`, e as chaves estrangeiras ficam ativadas. |
+| Testes parametrizados | 13 métodos com `@ParameterizedTest`. Por exemplo, o `ContaTest` envia `0`, `-10.00`, `0.001`, `10.005` e `null` para cada operação e confere que todos são recusados sem mudar nenhum saldo. |
+| Testes automatizados e CI | 135 testes JUnit 6 em 9 classes, incluindo testes de integração com um arquivo SQLite real. O [`ci.yml`](.github/workflows/ci.yml) roda tudo no Java 17, 21 e 25 a cada push e pull request. |
 
-## Arquitetura
+## Como funciona
 
 ```mermaid
-flowchart LR
-    Main["Main (CLI)"] --> Banco
-    subgraph domain [Domínio - regras de negócio]
-        Banco --> Conta
-        Conta --> ContaCorrente & ContaPoupanca
-        Banco -. usa .-> Repo[["RepositorioBanco (interface)"]]
-        Conta --> Transacao & Moeda
-        Cliente --> Cpf
-    end
-    subgraph persistencia [persistencia]
-        Sqlite[RepositorioSqlite]
-    end
-    Sqlite -. implementa .-> Repo
-    Sqlite --> DB[(Arquivo SQLite)]
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#D8F3DC','primaryTextColor':'#1B4332','primaryBorderColor':'#2D6A4F','lineColor':'#2D6A4F','secondaryColor':'#A8D5BA','tertiaryColor':'#FFFFFF'}}}%%
+classDiagram
+    direction LR
+    class Conta {
+      <<abstract>>
+      -saldo : BigDecimal
+      -historico : List~Transacao~
+      ~depositar()
+      ~sacar()
+      ~transferir()
+      #calcularSaldoDisponivel()
+    }
+    class ContaCorrente {
+      -limiteChequeEspecial
+      #calcularSaldoDisponivel()
+    }
+    class ContaPoupanca {
+      -ultimoMesComRendimento
+      ~aplicarRendimento()
+    }
+    class RepositorioBanco {
+      <<interface>>
+    }
+    Conta <|-- ContaCorrente
+    Conta <|-- ContaPoupanca
+    Banco --> Conta
+    Banco --> RepositorioBanco
+    RepositorioBanco <|.. RepositorioSqlite
 ```
 
-| Classe | Responsabilidade |
-|---|---|
-| `Banco` | Porta de entrada única: abre contas, numera, executa as operações e grava o resultado |
-| `Conta`, `ContaCorrente`, `ContaPoupanca` | Saldo, extrato e regras; o cheque especial é uma sobrescrita polimórfica |
-| `Transacao` / `TipoTransacao` | Lançamento imutável do extrato e seu tipo (crédito/débito) |
-| `Moeda` | Conversão, validação, arredondamento e formatação em `R$` |
-| `Cliente`, `Cpf` | Titular; objeto de valor do CPF com validação dos dígitos verificadores |
-| `RepositorioBanco` | Contrato de armazenamento definido pelo domínio |
-| `persistencia.RepositorioSqlite` | Implementação com JDBC e transações SQL |
-| `Main` | Apenas o menu do console, sem regras de negócio |
+O `Main` só mostra o menu e lê o que você digita. Toda ação passa pelo `Banco`, que segue sempre os mesmos três passos. Primeiro, ele tira uma "foto" das contas envolvidas. Depois, pede para a conta aplicar a regra: a `Conta` confere o valor, pergunta ao `calcularSaldoDisponivel()` quanto pode ser gasto e lança `SaldoInsuficienteException` se não for suficiente. Por último, salva tudo numa transação SQL e, se a gravação falhar, as contas voltam para a foto. Quando o programa abre, ele refaz cada extrato e confere se a soma bate com o saldo gravado.
 
-Os identificadores do código estão em português porque o projeto modela termos bancários brasileiros.
+## Decisões técnicas
 
-Principais decisões (detalhes em [docs/DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md), em inglês):
+- **Escolhi `BigDecimal` em vez de `double`** porque o `double` não consegue guardar a maioria dos valores decimais de forma exata. No banco, o dinheiro fica em centavos inteiros (`INTEGER`) pelo mesmo motivo.
+- **Escolhi o SQLite em vez de um servidor de banco** porque ele é um arquivo só, com SQL e transações de verdade, e não exige instalar nada a mais para rodar o projeto.
+- **Escolhi fazer o cheque especial com sobrescrita de método em vez de um `if` pelo tipo da conta.** Um novo tipo de conta vira uma nova classe, sem mexer nas regras da `Conta`.
+- **Escolhi uma exceção verificada (checked) para saldo insuficiente** porque é uma situação esperada, e o compilador obriga o menu a tratá-la com uma mensagem clara.
 
-- **`BigDecimal` na memória, centavos inteiros no banco de dados.** `double` e o tipo `REAL` do
-  SQLite são ponto flutuante binário (`0.1 + 0.2 = 0.30000000000000004`).
-- **Capturar, aplicar, gravar ou desfazer.** O `Banco` guarda o estado das contas envolvidas, aplica
-  a regra e grava todas em uma única transação SQL. Se a gravação falhar, o banco de dados desfaz
-  tudo (*rollback*) e as contas voltam ao estado guardado.
-- **Os dados são conferidos ao carregar.** Cada extrato é refeito e precisa bater com o saldo
-  gravado; dados inconsistentes ou alterados impedem o início, com uma mensagem clara.
-- **O domínio não depende do SQLite.** O `Banco` conversa com a interface `RepositorioBanco`; os
-  testes de regras usam um repositório em memória que pode falhar de propósito.
-- **Dígitos verificadores do CPF, nunca o número completo nas mensagens.** A validação é apenas
-  matemática (veja as limitações).
+Mais detalhes e as alternativas que considerei estão em [DESIGN_DECISIONS.md](docs/DESIGN_DECISIONS.md) (em inglês).
 
-## Estrutura do projeto
+## Como rodar
 
-```text
-.
-├── .github/                        # CI (Java 17, 21, 25) e Dependabot
-├── docs/                           # Arquitetura, decisões de projeto, testes
-├── src/main/java/com/github/amandadamata/sistemabancario/
-│   ├── Banco.java, Conta.java, ContaCorrente.java, ContaPoupanca.java
-│   ├── Cliente.java, Cpf.java, Moeda.java, Transacao.java, TipoTransacao.java
-│   ├── RepositorioBanco.java, ContaPersistida.java, EstadoConta.java, TipoConta.java
-│   ├── FalhaPersistenciaException.java, SaldoInsuficienteException.java
-│   ├── Main.java
-│   └── persistencia/RepositorioSqlite.java
-├── src/test/java/...               # Testes de unidade, de integração (SQLite) e da CLI
-├── mvnw, mvnw.cmd, .mvn/           # Maven Wrapper
-└── pom.xml
-```
-
-## Pré-requisitos
-
-- JDK 17 ou superior (`java -version`)
-- Acesso à internet no primeiro build, para o Maven Wrapper baixar o Maven e as dependências
-
-## Build e execução (macOS / Linux)
+Você precisa do Java 17 ou mais novo. O primeiro build baixa o Maven e as dependências pelo Maven Wrapper. Desenvolvi no IntelliJ IDEA, mas qualquer terminal funciona.
 
 ```bash
 git clone https://github.com/Amandadamata/sistema-bancario-java.git
@@ -117,81 +103,44 @@ cd sistema-bancario-java
 java -jar target/sistema-bancario-java-1.1.0.jar
 ```
 
-No Windows, use `mvnw.cmd` no lugar de `./mvnw`.
-
-Os dados ficam em `dados/sistema-bancario.db`, relativo à pasta onde o comando é executado. Para
-usar outro arquivo, por exemplo em uma demonstração:
-
-```bash
-SISTEMA_BANCARIO_DB=/tmp/banco-demo.db java -jar target/sistema-bancario-java-1.1.0.jar
-```
-
-Para começar do zero, apague o arquivo do banco de dados. A pasta `dados/` e os arquivos `*.db` são
-ignorados pelo Git.
-
-## Exemplo de uso
-
-Saída real da aplicação empacotada, executada duas vezes sobre o mesmo banco de dados (linhas do
-menu omitidas). Na primeira execução, a conta 1000 (poupança) recebe um depósito, envia uma
-transferência e recebe o rendimento. A segunda execução mostra os dados restaurados e a regra
-mensal ainda respeitada:
-
-```text
-Nº 1000 | Conta Poupança | Titular: Ana Souza            | Saldo: R$ 853,75
-Nº 1001 | Conta Corrente | Titular: Bruno Lima           | Saldo: R$ 150,50
-[21/10/2026 11:12:45] Depósito                                   +R$ 1.000,00 | Saldo após: R$ 1.000,00
-[21/10/2026 11:12:45] Transferência enviada (para a conta 1001)  -R$ 150,50 | Saldo após: R$ 849,50
-[21/10/2026 11:12:45] Rendimento                                 +R$ 4,25 | Saldo após: R$ 853,75
-Saldo atual: R$ 853,75
-Erro: O rendimento de 10/2026 já foi aplicado a esta conta.
-```
-
-## Testes
-
 ```bash
 ./mvnw test
 ```
 
-A suíte cobre aritmética monetária, operações recusadas que não alteram dados, cheque especial,
-transferências, conteúdo do extrato, rendimento mensal, validação de CPF, numeração e sessões
-completas do menu. Os testes de integração usam um arquivo SQLite real para conferir o reinício,
-uma transferência interrompida no meio da transação SQL, saldos adulterados, arquivos ilegíveis e
-esquemas de versão mais nova. Veja [docs/TESTING.md](docs/TESTING.md).
+No Windows, use `mvnw.cmd`. Os dados ficam em `dados/sistema-bancario.db`. Para usar outro arquivo, defina `SISTEMA_BANCARIO_DB=/tmp/banco-demo.db`. O GIF da demonstração pode ser gravado de novo com o [VHS](https://github.com/charmbracelet/vhs): `vhs docs/assets/demo.tape`.
 
-## Integração contínua
+## Estrutura do projeto
 
-O GitHub Actions executa `./mvnw --batch-mode verify` com Java 17, 21 e 25 a cada push e pull
-request para a `main`, com permissão somente de leitura no repositório.
+```text
+src/main/java/com/github/amandadamata/sistemabancario/
+├── Banco.java                  # porta de entrada de toda operação; foto, aplica, salva ou desfaz
+├── Conta.java                  # conta abstrata: saldo, extrato, regras comuns
+├── ContaCorrente.java          # cheque especial
+├── ContaPoupanca.java          # rendimento mensal
+├── Cliente.java, Cpf.java      # titular e validação de CPF
+├── Moeda.java, Transacao.java  # leitura e formatação de valores, linhas do extrato
+├── RepositorioBanco.java       # contrato de armazenamento
+├── persistencia/RepositorioSqlite.java  # JDBC + transações SQL
+└── Main.java                   # só o menu do console
+src/test/                       # 135 testes: unidade, integração com SQLite e sessões do menu
+docs/                           # arquitetura, decisões, testes
+```
 
-## Segurança e privacidade
+## Limites e próximos passos
 
-- O banco de dados contém nomes e CPFs. É um arquivo local, ignorado pelo Git (`dados/`, `*.db`), e
-  não é criptografado.
-- Mensagens de erro e o `toString()` nunca mostram o CPF completo.
-- Testes e exemplos usam CPFs sintéticos, gerados pelo algoritmo.
-- Os comandos SQL usam parâmetros de `PreparedStatement`, nunca concatenação de texto digitado.
+O que ainda não faz:
 
-## Limitações conhecidas
+- A validação do CPF é só matemática. Ela não comprova a identidade de ninguém.
+- O rendimento de 0,5% é uma regra simplificada, não a fórmula oficial da poupança.
+- Não há login, juros de cheque especial nem encerramento de conta. Um processo por vez usa o banco, e o arquivo não é criptografado.
 
-- A validação do CPF é apenas matemática. Ela não comprova identidade, titularidade nem situação
-  cadastral na Receita Federal.
-- O rendimento da poupança é uma regra educacional (0,5% por mês-calendário sobre o saldo atual);
-  não reproduz a regra oficial (data de aniversário, TR, Selic).
-- Sem juros ou tarifas de cheque especial, sem autenticação, sem encerramento de conta.
-- Um processo por vez: duas cópias do programa no mesmo arquivo não são coordenadas.
-- O arquivo do banco de dados não é criptografado.
+Próximos passos que estou planejando:
 
-## Próximos passos possíveis
+- Expor as contas por uma API REST com Spring Boot, que estou estudando agora.
+- Encerramento de conta, com regras para o saldo que sobrar.
+- Migrações de esquema (a versão já fica guardada em `PRAGMA user_version`).
 
-- Encerramento de conta, com regras para o saldo restante
-- Migrações do banco de dados se o esquema mudar (a versão já é guardada em `PRAGMA user_version`)
+## Autora
 
-## Documentação (em inglês)
-
-- [Arquitetura](docs/ARCHITECTURE.md): diagramas, responsabilidades, esquema do banco de dados, fluxo de execução
-- [Decisões de projeto](docs/DESIGN_DECISIONS.md): o que foi escolhido, por quê, alternativas e os testes que verificam
-- [Testes](docs/TESTING.md): como executar, o que cada classe verifica, cobertura
-
-## Licença
-
-[MIT](LICENSE)
+**Amanda da Mata** · Desenvolvedora Back-End em formação · Java e Python  
+[LinkedIn](https://www.linkedin.com/in/amanda-da-mata-492106288) · [amandadamataprofissional@gmail.com](mailto:amandadamataprofissional@gmail.com) · [GitHub](https://github.com/Amandadamata)
