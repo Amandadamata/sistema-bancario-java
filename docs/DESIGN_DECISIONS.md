@@ -141,3 +141,19 @@ verified.
 - **Decision:** class and method names stay in Portuguese; public documentation is in English.
 - **Why:** the code models Brazilian banking terms; translating would change almost every line
   without improving behavior.
+
+## 17. Desktop as a new presentation layer
+
+Swing and FlatLaf add a local graphical interface without changing the original 17 production
+classes. Forms call `Banco`, never perform financial calculations. `SwingWorker` keeps SQLite off
+the EDT, while a single-operation guard protects the existing non-concurrent model. Layout managers
+and a width-tracking scrollable panel handle window resizing.
+
+## 18. Stable paths and local packaging
+
+Finder launches do not guarantee the working directory. Desktop data therefore uses a stable user
+folder, with an explicit environment override for old files. A file lock coordinates desktop
+instances; the old CLI remains subject to its documented exclusive-use assumption.
+
+The shaded JAR targets Java 17 and starts `DesktopMain`, or the original menu with `--terminal`. An optional `jpackage` script builds a
+macOS app image with a bundled runtime. Developer signing and notarization remain distribution work.

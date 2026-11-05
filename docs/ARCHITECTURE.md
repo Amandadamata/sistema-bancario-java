@@ -8,6 +8,7 @@ and how data is stored. For the reasons behind each choice, see
 
 | Layer | Classes | Knows about |
 |---|---|---|
+| Desktop interface | `DesktopMain`, `ui.JanelaBanco`, panels, `TarefasUi` | `Banco`, Swing, FlatLaf |
 | Console interface | `Main` | `Banco`, domain types for display |
 | Domain | `Banco`, `Conta`, `ContaCorrente`, `ContaPoupanca`, `Cliente`, `Cpf`, `Transacao`, `TipoTransacao`, `Moeda`, exceptions | Only the `RepositorioBanco` interface |
 | Storage contract | `RepositorioBanco`, `ContaPersistida`, `TipoConta` | Domain value types |
@@ -80,7 +81,7 @@ classDiagram
 ```
 
 `~` marks package-private members: operations that change balances can only be called by `Banco`,
-which is in the same package. `Main` cannot call `conta.depositar(...)` directly and bypass saving.
+which is in the same package. `Main` is also in that package, so package visibility alone cannot prevent it from calling those methods. By convention it calls `Banco`; the new `ui` subpackage is outside that boundary and cannot call the package-private account mutations.
 
 ## Database schema
 
@@ -185,3 +186,21 @@ before anything changes and nothing is saved.
 
 `Banco` receives a `java.time.Clock` and passes it to every account. Statement timestamps and the
 "once per month" yield rule read the time from that clock; tests use a clock they control.
+
+## Desktop entry point (1.2.0)
+
+The executable JAR starts `DesktopMain`. With `--terminal`, it hands over to the original `Main`
+menu instead; running through `java -jar` also avoids the native-access warning on recent JDKs.
+`DesktopMain` resolves a stable user data path, acquires a file lock, loads the unchanged SQLite
+schema and schedules window construction on the EDT. `JanelaBanco` swaps panels inside one window.
+Forms capture immutable request data on the EDT. `TarefasUi` runs one `Banco` operation at a time
+through `SwingWorker`, then refreshes the view or shows an error on the EDT. Controls stay disabled
+and window closing waits during a write. The domain itself remains single-threaded.
+
+`ModeloHistorico` copies existing transactions, reverses their presentation order and formats
+them for a read-only table. `PainelRolavel` tracks viewport width when resizing.
+
+The default macOS desktop path is `~/Library/Application Support/Linha/sistema-bancario.db`.
+`SISTEMA_BANCARIO_DB` overrides it. The CLI still uses its original relative default. No automatic
+migration or replacement of existing files occurs. The file lock coordinates desktop instances
+only; do not use the CLI or external editors concurrently on that file.

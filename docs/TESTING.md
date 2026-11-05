@@ -22,6 +22,10 @@
 | `MoedaTest` | unit | Parsing `100,50` / `100.50`, rejecting ambiguous input, `R$` formatting |
 | `RepositorioSqliteTest` | integration | Real SQLite file: restart round trip, transfer interrupted mid-transaction, integer cents, tampered balances, constraints, foreign keys enabled on the repository's connections, schema version, unreadable files |
 | `MainTest` | integration | Full menu sessions with simulated input, CPF re-entry, data surviving two program runs |
+| `ArquivoAplicacaoTest` | unit | Stable data path per system, environment override, lock between desktop instances |
+| `DesktopMainTest` | unit | The JAR opens the window by default and the menu with `--terminal` |
+| `ModeloHistoricoTest` | unit | Statement table: newest first, row limit, signed amounts |
+| `JanelaBancoTest` | UI | Real Swing windows and events on a temporary SQLite file (see below) |
 
 ## Techniques used
 
@@ -56,5 +60,36 @@ open target/site/jacoco/index.html
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs `./mvnw --batch-mode verify` on Java 17, 21, and 25 for every push and
-pull request to `main`.
+`.github/workflows/ci.yml` runs on every push and pull request to `main`:
+
+- `./mvnw --batch-mode verify` on Java 17, 21 and 25, then starts the packaged JAR with `--terminal`.
+- `xvfb-run -a ./mvnw --batch-mode -Pui-tests verify` on Java 17, so the Swing flows also run on a
+  virtual display on the minimum supported version.
+
+## Desktop flows
+
+Use `./mvnw -Pui-tests verify` from a graphical session. The normal build explicitly skips
+`JanelaBancoTest`; it does not claim those graphical checks passed. The full suite has 151 cases,
+8 of them Swing flows.
+
+`JanelaBancoTest` uses real Swing frames, button events and temporary SQLite databases. It checks:
+
+- Initial empty state, CPF correction, account creation, deposit, withdrawal and cancellation.
+- Invalid formats, zero amounts, insufficient balance and unchanged state after errors.
+- Transfer destination selection (excluding the source), both balances, both histories and reload.
+- Forced SQLite failure, memory rollback, correction and retry without duplicate transactions.
+- Monthly yield, repeated yield rejection, account switching and navigation.
+- No valid destination disables transfer confirmation.
+- A blocked repository does not block the EDT; duplicate submission and closing during work are prevented.
+- Resizing to 860 × 700 keeps Transferir within viewport bounds.
+- Free space in the window uses the theme background.
+
+The visual test renders the actual Swing content pane with `printAll` to `target/visual/`. These
+PNGs are component renderings without the operating system's window frame. The ones in
+`docs/assets/linha-*.png` are copied from there after visual inspection.
+
+## What isn't covered
+
+Clicks come from Swing events, not from a physical pointer. Complete screen-reader testing has not
+been done. The `.app` is built and opened on Apple Silicon only, and the first-launch steps on another
+Mac depend on that Mac's Gatekeeper settings.
