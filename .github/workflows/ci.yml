@@ -32,3 +32,27 @@ jobs:
 
       - name: Build and test
         run: ./mvnw --batch-mode verify
+
+      - name: Run the packaged JAR
+        run: |
+          printf '0\n' | SISTEMA_BANCARIO_DB="$RUNNER_TEMP/smoke.db" \
+            java -jar target/sistema-bancario-java-*.jar --terminal | grep 'Até logo'
+
+  desktop-ui:
+    # Swing flows need a display, so they run on a virtual one, on the minimum supported Java.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Build and test with UI flows
+        run: xvfb-run -a ./mvnw --batch-mode -Pui-tests verify
