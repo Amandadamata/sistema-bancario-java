@@ -11,7 +11,7 @@
 
 Sistema bancário em Java 17, com conta corrente e poupança e dados em SQLite. Tem duas interfaces sobre as mesmas regras de negócio: o **Linha**, aplicativo desktop em Swing, e o menu original de terminal.
 
-É um projeto de estudo. As operações alteram apenas saldos locais, e nenhum dinheiro real é movimentado.
+É um projeto de estudo. As operações alteram apenas saldos locais, e nenhum dinheiro real é movimentado. O aplicativo em si está em inglês.
 
 ## O problema
 
@@ -45,7 +45,7 @@ A interface desktop entrou sem alterar nenhuma das classes originais de domínio
 - Extrato com data, tipo, valor com sinal, saldo resultante e a outra conta da transferência.
 - Validação dos dígitos verificadores do CPF, com um CPF por titular.
 - Dados salvos em SQLite: contas e extratos sobrevivem ao reinício.
-- Formato brasileiro: você digita `100,50` ou `100.50` e vê `R$ 1.234,56`.
+- Valores em reais: você digita `100.50` ou `100,50` e vê `R$ 1.234,56`.
 - No desktop: erros preservam o formulário, a gravação roda em segundo plano para a janela não travar, e um duplo clique não envia duas vezes.
 
 ## O que este projeto mostra
@@ -127,7 +127,7 @@ Mais detalhes e as alternativas que considerei estão em [DESIGN_DECISIONS.md](d
 
 | Pacote | O que precisa | Como abrir |
 |---|---|---|
-| [`Linha-JAR-portatil.zip`](https://github.com/Amandadamata/sistema-bancario-java/releases/latest/download/Linha-JAR-portatil.zip) | Java 17 ou superior, em qualquer sistema | `java -jar Linha.jar` para a janela, ou `java -jar Linha.jar --terminal` para o menu |
+| [`Linha-portable-JAR.zip`](https://github.com/Amandadamata/sistema-bancario-java/releases/latest/download/Linha-portable-JAR.zip) | Java 17 ou superior, em qualquer sistema | `java -jar Linha.jar` para a janela, ou `java -jar Linha.jar --terminal` para o menu |
 | [`Linha-Mac-AppleSilicon.zip`](https://github.com/Amandadamata/sistema-bancario-java/releases/latest/download/Linha-Mac-AppleSilicon.zip) | Mac com Apple Silicon; o Java já vem incluído | Descompacte e abra o `Linha.app` |
 
 O aplicativo para Mac não tem certificado de desenvolvedor Apple, então o macOS bloqueia a primeira abertura. Para liberar, tente abrir uma vez e depois vá em **Ajustes do Sistema → Privacidade e Segurança → Abrir Mesmo Assim**.
@@ -145,13 +145,13 @@ cd sistema-bancario-java
 Abrir o aplicativo desktop:
 
 ```bash
-java -jar target/sistema-bancario-java-1.2.0.jar
+java -jar target/sistema-bancario-java-1.3.0.jar
 ```
 
 Abrir o menu no terminal:
 
 ```bash
-java -jar target/sistema-bancario-java-1.2.0.jar --terminal
+java -jar target/sistema-bancario-java-1.3.0.jar --terminal
 ```
 
 No Windows, use `mvnw.cmd`. No IntelliJ IDEA, abra o `pom.xml`, escolha um JDK 17 ou superior e execute `DesktopMain` (janela) ou `Main` (terminal).

@@ -13,14 +13,14 @@ public final class JanelaBanco extends JFrame {
     private final JPanel conteudo = new PainelRolavel();
     private final JPanel cabecalho = new JPanel(new BorderLayout(16, 0));
     private final JTextArea mensagem = Componentes.explicacao("");
-    private final JButton inicio = Componentes.botao("Visão geral", this::mostrarResumo);
-    private final JButton extrato = Componentes.botao("Movimentações", this::mostrarHistorico);
-    private final JButton novaConta = Componentes.botao("Nova conta", this::mostrarNovaConta);
+    private final JButton inicio = Componentes.botao("Overview", this::mostrarResumo);
+    private final JButton extrato = Componentes.botao("Transactions", this::mostrarHistorico);
+    private final JButton novaConta = Componentes.botao("New account", this::mostrarNovaConta);
     private final TarefasUi tarefas;
     private Conta conta;
 
     public JanelaBanco(Banco banco, Path arquivo, Runnable aoFechar) {
-        super("Linha · Sistema Bancário");
+        super("Linha · Banking System");
         this.banco = banco;
         this.conta = banco.listarContas().stream().findFirst().orElse(null);
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -42,9 +42,9 @@ public final class JanelaBanco extends JFrame {
         JPanel rodape = new JPanel(new BorderLayout(0, 6));
         mensagem.setRows(2);
         mensagem.setName("mensagem");
-        mensagem.getAccessibleContext().setAccessibleName("Resultado da operação");
+        mensagem.getAccessibleContext().setAccessibleName("Operation result");
         rodape.add(mensagem, BorderLayout.CENTER);
-        JLabel local = Componentes.texto("Projeto educacional · Dados salvos neste computador", 12, false);
+        JLabel local = Componentes.texto("Study project · Data saved on this computer", 12, false);
         local.setForeground(Tema.SECUNDARIO);
         local.setToolTipText(arquivo.toAbsolutePath().toString());
         rodape.add(local, BorderLayout.SOUTH);
@@ -53,7 +53,7 @@ public final class JanelaBanco extends JFrame {
         addWindowListener(new WindowAdapter() {
             public void windowClosing(WindowEvent evento) {
                 if (tarefas.ocupada()) {
-                    mensagem.setText("Aguarde a operação terminar antes de fechar.");
+                    mensagem.setText("Wait for the operation to finish before closing.");
                     return;
                 }
                 dispose();
@@ -75,7 +75,7 @@ public final class JanelaBanco extends JFrame {
         JLabel marca = Componentes.texto("linha", 34, true);
         marca.setForeground(Tema.DESTAQUE);
         Componentes.adicionar(itens, marca, 4);
-        JLabel subtitulo = Componentes.texto("SISTEMA BANCÁRIO", 10, true);
+        JLabel subtitulo = Componentes.texto("BANKING SYSTEM", 10, true);
         subtitulo.setForeground(Tema.SECUNDARIO);
         Componentes.adicionar(itens, subtitulo, 52);
         for (JButton botao : new JButton[]{inicio, extrato, novaConta}) {
@@ -84,18 +84,18 @@ public final class JanelaBanco extends JFrame {
             Componentes.adicionar(itens, botao, 10);
         }
         menu.add(itens, BorderLayout.NORTH);
-        menu.add(Componentes.texto("Simples. Local. Seu.", 12, false), BorderLayout.SOUTH);
+        menu.add(Componentes.texto("Simple. Local. Yours.", 12, false), BorderLayout.SOUTH);
         return menu;
     }
 
     private void atualizarCabecalho() {
         cabecalho.removeAll();
-        JLabel saudacao = Componentes.texto(conta == null ? "Boas-vindas ao Linha."
-                : "Olá, " + conta.getTitular().getNome().split("\\s+")[0] + ".", 18, true);
+        JLabel saudacao = Componentes.texto(conta == null ? "Welcome to Linha."
+                : "Hi, " + conta.getTitular().getNome().split("\\s+")[0] + ".", 18, true);
         cabecalho.add(saudacao, BorderLayout.CENTER);
         JComboBox<Conta> seletor = Componentes.contas(banco.listarContas());
         seletor.setName("contas");
-        seletor.getAccessibleContext().setAccessibleName("Conta selecionada");
+        seletor.getAccessibleContext().setAccessibleName("Selected account");
         seletor.setPreferredSize(new Dimension(340, 44));
         seletor.setSelectedItem(conta);
         seletor.setVisible(conta != null);
@@ -141,10 +141,10 @@ public final class JanelaBanco extends JFrame {
     private void mostrarResumo() {
         if (conta == null) {
             JPanel vazio = Componentes.coluna();
-            Componentes.adicionar(vazio, Componentes.texto("Um lugar para começar.", 30, true), 18);
+            Componentes.adicionar(vazio, Componentes.texto("A place to start.", 30, true), 18);
             Componentes.adicionar(vazio, Componentes.explicacao(
-                    "Abra sua primeira conta para acompanhar o saldo, fazer operações e consultar seu histórico."), 28);
-            Componentes.adicionar(vazio, Componentes.principal("Abrir primeira conta", this::mostrarNovaConta), 0);
+                    "Open your first account to track your balance, make transactions and see your history."), 28);
+            Componentes.adicionar(vazio, Componentes.principal("Open first account", this::mostrarNovaConta), 0);
             exibir(vazio, "vazio");
         } else {
             exibir(new PainelResumo(conta, this::mostrarOperacao, this::mostrarHistorico,
@@ -159,21 +159,21 @@ public final class JanelaBanco extends JFrame {
     private void mostrarOperacao(PainelOperacao.Tipo tipo) {
         exibir(new PainelOperacao(tipo, conta, banco.listarContas(), pedido -> {
             mensagem.setForeground(Tema.SECUNDARIO);
-            mensagem.setText("Salvando operação…");
+            mensagem.setText("Saving…");
             tarefas.executar(() -> {
                 switch (pedido.tipo()) {
                     case DEPOSITO -> banco.depositar(pedido.origem(), pedido.valor());
                     case SAQUE -> banco.sacar(pedido.origem(), pedido.valor());
                     case TRANSFERENCIA -> {
-                        if (pedido.destino() == null) throw new IllegalArgumentException("Selecione a conta de destino.");
+                        if (pedido.destino() == null) throw new IllegalArgumentException("Select the destination account.");
                         banco.transferir(pedido.origem(), pedido.destino(), pedido.valor());
                     }
                 }
                 String valor = Moeda.formatar(pedido.valor());
                 return switch (pedido.tipo()) {
-                    case DEPOSITO -> "Depósito de " + valor + " concluído.";
-                    case SAQUE -> "Saque de " + valor + " concluído.";
-                    case TRANSFERENCIA -> "Transferência de " + valor + " concluída.";
+                    case DEPOSITO -> "Deposit of " + valor + " completed.";
+                    case SAQUE -> "Withdrawal of " + valor + " completed.";
+                    case TRANSFERENCIA -> "Transfer of " + valor + " completed.";
                 };
             }, this::concluir);
         }, this::mostrarErro, this::mostrarResumo), "operacao");
@@ -182,29 +182,29 @@ public final class JanelaBanco extends JFrame {
     private void mostrarNovaConta() {
         exibir(new PainelNovaConta(pedido -> {
             mensagem.setForeground(Tema.SECUNDARIO);
-            mensagem.setText("Salvando conta…");
+            mensagem.setText("Saving account…");
             tarefas.executar(() -> pedido.corrente()
                     ? banco.abrirContaCorrente(pedido.titular(), pedido.limite())
                     : banco.abrirContaPoupanca(pedido.titular()), nova -> {
                 conta = nova;
                 atualizarCabecalho();
-                concluir("Conta " + nova.getNumero() + " criada com sucesso.");
+                concluir("Account " + nova.getNumero() + " created.");
             });
         }, this::mostrarErro, this::mostrarResumo), "nova-conta");
     }
 
     private void mostrarRendimento() {
         JPanel painel = Componentes.coluna();
-        Componentes.adicionar(painel, Componentes.texto("Rendimento mensal", 30, true), 18);
+        Componentes.adicionar(painel, Componentes.texto("Monthly interest", 30, true), 18);
         Componentes.adicionar(painel, Componentes.explicacao(
-                "Aplica 0,5% sobre o saldo atual da poupança, uma vez por mês.\n"
-                + "Esta é uma regra simplificada do projeto, não a regra da poupança real."), 24);
+                "Applies 0.5% to the current savings balance, once a month.\n"
+                + "This is a simplified rule for this project, not a real savings formula."), 24);
         int numero = conta.getNumero();
-        Componentes.adicionar(painel, Componentes.principal("Confirmar rendimento", () ->
+        Componentes.adicionar(painel, Componentes.principal("Confirm interest", () ->
                 tarefas.executar(() -> banco.aplicarRendimento(numero), valor -> concluir(valor.signum() > 0
-                        ? "Rendimento de " + Moeda.formatar(valor) + " aplicado."
-                        : "O saldo ainda não gera rendimento de R$ 0,01."))), 12);
-        Componentes.adicionar(painel, Componentes.botao("Cancelar", this::mostrarResumo), 0);
+                        ? "Interest of " + Moeda.formatar(valor) + " applied."
+                        : "The balance doesn't earn R$ 0,01 in interest yet."))), 12);
+        Componentes.adicionar(painel, Componentes.botao("Cancel", this::mostrarResumo), 0);
         exibir(painel, "rendimento");
     }
 

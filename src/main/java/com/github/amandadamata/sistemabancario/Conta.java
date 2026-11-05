@@ -28,23 +28,23 @@ public abstract class Conta {
      */
     protected Conta(int numero, Cliente titular, Clock relogio) {
         if (numero <= 0) {
-            throw new IllegalArgumentException("O número da conta deve ser positivo.");
+            throw new IllegalArgumentException("The account number must be positive.");
         }
         this.numero = numero;
-        this.titular = Objects.requireNonNull(titular, "O titular é obrigatório.");
-        this.relogio = Objects.requireNonNull(relogio, "O relógio é obrigatório.");
+        this.titular = Objects.requireNonNull(titular, "The account holder is required.");
+        this.relogio = Objects.requireNonNull(relogio, "The clock is required.");
     }
 
     void depositar(BigDecimal valor) {
         BigDecimal valorValidado = Moeda.validarValorPositivo(
-                valor, "O valor do depósito deve ser maior que zero.");
+                valor, "The deposit amount must be greater than zero.");
         registrar(TipoTransacao.DEPOSITO, valorValidado, OptionalInt.empty());
     }
 
     void sacar(BigDecimal valor) throws SaldoInsuficienteException {
         BigDecimal valorValidado = Moeda.validarValorPositivo(
-                valor, "O valor do saque deve ser maior que zero.");
-        garantirSaldoDisponivel(valorValidado, "saque");
+                valor, "The withdrawal amount must be greater than zero.");
+        garantirSaldoDisponivel(valorValidado, "withdrawal");
         registrar(TipoTransacao.SAQUE, valorValidado, OptionalInt.empty());
     }
 
@@ -59,14 +59,14 @@ public abstract class Conta {
      */
     void transferir(Conta destino, BigDecimal valor) throws SaldoInsuficienteException {
         if (destino == null) {
-            throw new IllegalArgumentException("Conta de destino inválida.");
+            throw new IllegalArgumentException("Invalid destination account.");
         }
         if (destino == this) {
-            throw new IllegalArgumentException("Não é possível transferir para a mesma conta.");
+            throw new IllegalArgumentException("You can't transfer to the same account.");
         }
         BigDecimal valorValidado = Moeda.validarValorPositivo(
-                valor, "O valor da transferência deve ser maior que zero.");
-        garantirSaldoDisponivel(valorValidado, "transferência");
+                valor, "The transfer amount must be greater than zero.");
+        garantirSaldoDisponivel(valorValidado, "transfer");
 
         registrar(TipoTransacao.TRANSFERENCIA_ENVIADA, valorValidado, OptionalInt.of(destino.numero));
         destino.registrar(TipoTransacao.TRANSFERENCIA_RECEBIDA, valorValidado, OptionalInt.of(numero));
@@ -75,9 +75,9 @@ public abstract class Conta {
     /** Permite que subclasses registrem créditos próprios, como o rendimento da poupança. */
     protected final void creditar(BigDecimal valor, TipoTransacao tipo) {
         if (!tipo.isCredito()) {
-            throw new IllegalArgumentException("O tipo informado não é um crédito: " + tipo);
+            throw new IllegalArgumentException("The given type is not a credit: " + tipo);
         }
-        registrar(tipo, Moeda.validarValorPositivo(valor, "O crédito deve ser maior que zero."),
+        registrar(tipo, Moeda.validarValorPositivo(valor, "The credit must be greater than zero."),
                 OptionalInt.empty());
     }
 
@@ -94,7 +94,7 @@ public abstract class Conta {
             throws SaldoInsuficienteException {
         BigDecimal disponivel = calcularSaldoDisponivel();
         if (valor.compareTo(disponivel) > 0) {
-            throw new SaldoInsuficienteException("Saldo insuficiente. Disponível para " + operacao
+            throw new SaldoInsuficienteException("Insufficient balance. Available for " + operacao
                     + ": " + Moeda.formatar(disponivel));
         }
     }
@@ -130,13 +130,13 @@ public abstract class Conta {
         for (Transacao lancamento : lancamentos) {
             saldoCalculado = saldoCalculado.add(lancamento.valorComSinal());
             if (saldoCalculado.compareTo(lancamento.saldoResultante()) != 0) {
-                throw new FalhaPersistenciaException("Dados inconsistentes na conta " + numero
-                        + ": um lançamento não corresponde ao saldo registrado.");
+                throw new FalhaPersistenciaException("Inconsistent data in account " + numero
+                        + ": an entry doesn't match the recorded balance.");
             }
         }
         if (saldoCalculado.compareTo(saldoGravado) != 0) {
-            throw new FalhaPersistenciaException("Dados inconsistentes na conta " + numero
-                    + ": o saldo gravado não corresponde ao histórico.");
+            throw new FalhaPersistenciaException("Inconsistent data in account " + numero
+                    + ": the saved balance doesn't match the history.");
         }
         historico.clear();
         historico.addAll(lancamentos);

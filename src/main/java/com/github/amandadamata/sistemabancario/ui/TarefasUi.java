@@ -31,7 +31,7 @@ final class TarefasUi {
                     sucesso.accept(get());
                 } catch (InterruptedException interrompida) {
                     Thread.currentThread().interrupt();
-                    erro.accept("Operação interrompida. Feche e reabra o aplicativo para conferir o resultado.");
+                    erro.accept("Operation interrupted. Close and reopen the app to check the result.");
                 } catch (ExecutionException falha) {
                     Throwable causa = falha.getCause();
                     if (causa instanceof IllegalArgumentException || causa instanceof IllegalStateException
@@ -39,7 +39,7 @@ final class TarefasUi {
                             || causa instanceof com.github.amandadamata.sistemabancario.FalhaPersistenciaException) {
                         erro.accept(causa.getMessage());
                     } else {
-                        erro.accept("Não foi possível concluir. Reabra o aplicativo e confira o extrato antes de tentar novamente.");
+                        erro.accept("Could not finish. Reopen the app and check the statement before trying again.");
                     }
                 }
             }

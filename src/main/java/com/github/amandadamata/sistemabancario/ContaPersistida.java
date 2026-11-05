@@ -26,8 +26,8 @@ public record ContaPersistida(
         List<Transacao> historico) {
 
     public ContaPersistida {
-        Objects.requireNonNull(tipo, "O tipo da conta é obrigatório.");
-        Objects.requireNonNull(saldo, "O saldo é obrigatório.");
-        historico = List.copyOf(Objects.requireNonNull(historico, "O histórico é obrigatório."));
+        Objects.requireNonNull(tipo, "The account type is required.");
+        Objects.requireNonNull(saldo, "The balance is required.");
+        historico = List.copyOf(Objects.requireNonNull(historico, "The history is required."));
     }
 }

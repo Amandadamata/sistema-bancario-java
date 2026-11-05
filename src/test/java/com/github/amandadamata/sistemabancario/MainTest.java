@@ -30,11 +30,11 @@ class MainTest {
                 "0");
 
         assertAll(
-                () -> assertTrue(saida.contains("Conta criada com sucesso! Número: 1000"), saida),
-                () -> assertTrue(saida.contains("Conta criada com sucesso! Número: 1001"), saida),
-                () -> assertTrue(saida.contains("Transferência realizada com sucesso!"), saida),
-                () -> assertTrue(saida.contains("Transferência enviada (para a conta 1001)"), saida),
-                () -> assertTrue(saida.contains("Saldo atual: R$ 0,25"), saida));
+                () -> assertTrue(saida.contains("Account created! Number: 1000"), saida),
+                () -> assertTrue(saida.contains("Account created! Number: 1001"), saida),
+                () -> assertTrue(saida.contains("Transfer completed!"), saida),
+                () -> assertTrue(saida.contains("Transfer sent (to account 1001)"), saida),
+                () -> assertTrue(saida.contains("Current balance: R$ 0,25"), saida));
     }
 
     @Test
@@ -47,8 +47,8 @@ class MainTest {
                 "0");
 
         assertAll(
-                () -> assertTrue(saida.contains("Rendimento de R$ 5,00 aplicado à conta 1000."), saida),
-                () -> assertTrue(saida.contains("já foi aplicado a esta conta"), saida));
+                () -> assertTrue(saida.contains("Interest of R$ 5,00 applied to account 1000."), saida),
+                () -> assertTrue(saida.contains("has already been applied to this account"), saida));
     }
 
     @Test
@@ -62,12 +62,12 @@ class MainTest {
                 "0");
 
         assertAll(
-                () -> assertTrue(saida.contains("Entrada inválida. Digite um número inteiro"), saida),
-                () -> assertTrue(saida.contains("Valor inválido."), saida),
-                () -> assertTrue(saida.contains("Depósito realizado com sucesso!"), saida),
-                () -> assertTrue(saida.contains("Erro: O valor do saque deve ser maior que zero."), saida),
-                () -> assertTrue(saida.contains("Conta não encontrada."), saida),
-                () -> assertTrue(saida.contains("Encerrando o sistema. Até logo!"), saida));
+                () -> assertTrue(saida.contains("Invalid input. Enter a whole number"), saida),
+                () -> assertTrue(saida.contains("Invalid amount."), saida),
+                () -> assertTrue(saida.contains("Deposit completed!"), saida),
+                () -> assertTrue(saida.contains("Error: The withdrawal amount must be greater than zero."), saida),
+                () -> assertTrue(saida.contains("Account not found."), saida),
+                () -> assertTrue(saida.contains("Shutting down. Goodbye!"), saida));
     }
 
     @Test
@@ -86,14 +86,14 @@ class MainTest {
                 "0");
 
         assertAll(
-                () -> assertTrue(saida.contains("Nenhuma conta cadastrada."), saida),
-                () -> assertTrue(saida.contains("Nenhuma movimentação registrada ainda."), saida),
-                () -> assertTrue(saida.contains("Erro: Saldo insuficiente. Disponível para saque: R$ 50,00"), saida),
-                () -> assertTrue(saida.contains("Essa operação só está disponível para contas poupança."), saida),
-                () -> assertTrue(saida.contains("O saldo atual não gera rendimento de pelo menos R$ 0,01."), saida),
-                () -> assertTrue(saida.contains("Erro: Não é possível transferir para a mesma conta."), saida),
-                () -> assertTrue(saida.contains("Nº 1001 | Conta Poupança | Titular: Bruno Teste"), saida),
-                () -> assertTrue(saida.contains("Limite do cheque especial: R$ 50,00 | Disponível: R$ 50,00"), saida));
+                () -> assertTrue(saida.contains("No accounts yet."), saida),
+                () -> assertTrue(saida.contains("No transactions yet."), saida),
+                () -> assertTrue(saida.contains("Error: Insufficient balance. Available for withdrawal: R$ 50,00"), saida),
+                () -> assertTrue(saida.contains("This operation is only available for savings accounts."), saida),
+                () -> assertTrue(saida.contains("The current balance doesn't earn at least R$ 0,01 in interest."), saida),
+                () -> assertTrue(saida.contains("Error: You can't transfer to the same account."), saida),
+                () -> assertTrue(saida.contains("No. 1001 | Savings Account  | Holder: Bruno Teste"), saida),
+                () -> assertTrue(saida.contains("Overdraft limit: R$ 50,00 | Available: R$ 50,00"), saida));
     }
 
     @Test
@@ -103,9 +103,9 @@ class MainTest {
                 "0");
 
         assertAll(
-                () -> assertTrue(saida.contains("O CPF deve ter 11 dígitos."), saida),
-                () -> assertTrue(saida.contains("CPF inválido: os dígitos verificadores não conferem."), saida),
-                () -> assertTrue(saida.contains("Conta criada com sucesso! Número: 1000"), saida),
+                () -> assertTrue(saida.contains("The CPF must have 11 digits."), saida),
+                () -> assertTrue(saida.contains("Invalid CPF: the check digits don't match."), saida),
+                () -> assertTrue(saida.contains("Account created! Number: 1000"), saida),
                 () -> assertFalse(saida.contains("246.813.579"), saida));
     }
 
@@ -116,7 +116,7 @@ class MainTest {
                 "1", "Outra Pessoa", "24681357928", "2",
                 "0");
 
-        assertTrue(saida.contains("Erro: Este CPF já está cadastrado para outro titular."), saida);
+        assertTrue(saida.contains("Error: This CPF is already registered to another holder."), saida);
     }
 
     @Test
@@ -133,9 +133,9 @@ class MainTest {
                 "0");
 
         assertAll(
-                () -> assertTrue(segundaExecucao.contains("Nº 1000 | Conta Poupança | Titular: Ana Teste"), segundaExecucao),
-                () -> assertTrue(segundaExecucao.contains("Saldo atual: R$ 250,75"), segundaExecucao),
-                () -> assertTrue(segundaExecucao.contains("Depósito"), segundaExecucao));
+                () -> assertTrue(segundaExecucao.contains("No. 1000 | Savings Account  | Holder: Ana Teste"), segundaExecucao),
+                () -> assertTrue(segundaExecucao.contains("Current balance: R$ 250,75"), segundaExecucao),
+                () -> assertTrue(segundaExecucao.contains("Deposit"), segundaExecucao));
     }
 
     @Test
@@ -150,7 +150,7 @@ class MainTest {
     void fimDaEntradaEncerraComSeguranca() {
         String saida = executar("1", "Ana Teste");
 
-        assertTrue(saida.contains("Entrada encerrada. Encerrando o sistema com segurança."), saida);
+        assertTrue(saida.contains("Input ended. Shutting down safely."), saida);
     }
 
     private static final RelogioAjustavel RELOGIO = RelogioAjustavel.em("2026-10-20T13:00:00Z");

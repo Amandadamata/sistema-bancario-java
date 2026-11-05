@@ -9,7 +9,7 @@ import java.util.function.Consumer;
 
 final class PainelOperacao extends JPanel {
     enum Tipo {
-        DEPOSITO("Depositar"), SAQUE("Sacar"), TRANSFERENCIA("Transferir");
+        DEPOSITO("Deposit"), SAQUE("Withdraw"), TRANSFERENCIA("Transfer");
         final String rotulo;
         Tipo(String rotulo) { this.rotulo = rotulo; }
     }
@@ -23,30 +23,30 @@ final class PainelOperacao extends JPanel {
         setOpaque(false);
         JPanel formulario = Componentes.coluna();
         Componentes.adicionar(formulario, Componentes.texto(tipo.rotulo, 30, true), 14);
-        Componentes.adicionar(formulario, Componentes.explicacao("Conta " + conta.getNumero() + " · "
-                + conta.getTitular().getNome() + "\nDisponível: " + Moeda.formatar(conta.getSaldoDisponivel())
-                + (conta instanceof ContaCorrente ? " (inclui cheque especial)" : "")), 28);
+        Componentes.adicionar(formulario, Componentes.explicacao("Account " + conta.getNumero() + " · "
+                + conta.getTitular().getNome() + "\nAvailable: " + Moeda.formatar(conta.getSaldoDisponivel())
+                + (conta instanceof ContaCorrente ? " (includes overdraft)" : "")), 28);
         JTextField valor = new JTextField();
         valor.setName("valor");
-        valor.putClientProperty("JTextField.placeholderText", "0,00");
-        Componentes.campo(formulario, "Valor em reais", valor);
-        Componentes.adicionar(formulario, Componentes.explicacao("Exemplo: 1500,50. Digite sem separador de milhar."), 24);
+        valor.putClientProperty("JTextField.placeholderText", "0.00");
+        Componentes.campo(formulario, "Amount in reais (R$)", valor);
+        Componentes.adicionar(formulario, Componentes.explicacao("Example: 1500.50. No thousands separators."), 24);
         JComboBox<Conta> destino = Componentes.contas(contas.stream()
                 .filter(c -> c.getNumero() != conta.getNumero()).toList());
         destino.setName("destino");
         if (tipo == Tipo.TRANSFERENCIA) {
-            Componentes.campo(formulario, "Conta de destino", destino);
+            Componentes.campo(formulario, "Destination account", destino);
             if (destino.getItemCount() == 0) {
                 Componentes.adicionar(formulario, Componentes.explicacao(
-                        "Abra outra conta para poder transferir. Use Nova conta no menu."), 18);
+                        "Open another account to make a transfer. Use New account in the menu."), 18);
             }
         }
         JPanel botoes = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         botoes.setOpaque(false);
-        JButton enviar = Componentes.principal("Confirmar " + switch (tipo) {
-            case DEPOSITO -> "depósito";
-            case SAQUE -> "saque";
-            case TRANSFERENCIA -> "transferência";
+        JButton enviar = Componentes.principal("Confirm " + switch (tipo) {
+            case DEPOSITO -> "deposit";
+            case SAQUE -> "withdrawal";
+            case TRANSFERENCIA -> "transfer";
         }, () -> {
             try {
                 Conta selecionada = (Conta) destino.getSelectedItem();
@@ -62,7 +62,7 @@ final class PainelOperacao extends JPanel {
         valor.addActionListener(evento -> enviar.doClick());
         botoes.add(enviar);
         botoes.add(Box.createHorizontalStrut(12));
-        botoes.add(Componentes.botao("Cancelar", voltar));
+        botoes.add(Componentes.botao("Cancel", voltar));
         Componentes.adicionar(formulario, botoes, 0);
         add(formulario, BorderLayout.NORTH);
     }

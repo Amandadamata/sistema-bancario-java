@@ -15,7 +15,7 @@ class ModeloHistoricoTest {
         banco.transferir(1000, 1001, new BigDecimal("25.10"));
         ModeloHistorico modelo = new ModeloHistorico(conta, 5);
         assertEquals("24/10/2026 12:30:15", modelo.getValueAt(0, 0));
-        assertEquals("Transferência enviada · conta 1001", modelo.getValueAt(0, 1));
+        assertEquals("Transfer sent · account 1001", modelo.getValueAt(0, 1));
         assertEquals("− R$ 25,10", modelo.getValueAt(0, 2));
         assertEquals("R$ 75,40", modelo.getValueAt(0, 3));
         assertEquals("+ R$ 100,50", modelo.getValueAt(1, 2));

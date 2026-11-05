@@ -162,7 +162,7 @@ sequenceDiagram
         Banco->>Origem: restaurarEstado(captured)
         Banco->>Destino: restaurarEstado(captured)
         Banco-->>Main: FalhaPersistenciaException
-        Main-->>User: Erro: ... a operação foi desfeita
+        Main-->>User: Error: ... the operation was undone
     end
 ```
 

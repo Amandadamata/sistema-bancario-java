@@ -37,21 +37,21 @@ class CpfTest {
     @ValueSource(strings = {"   "})
     void cpfAusenteERecusado(String digitado) {
         IllegalArgumentException erro = assertThrows(IllegalArgumentException.class, () -> Cpf.de(digitado));
-        assertEquals("O CPF é obrigatório.", erro.getMessage());
+        assertEquals("The CPF is required.", erro.getMessage());
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"2468135792", "246813579281", "123", "246.813.579-2"})
     void tamanhoErradoERecusado(String digitado) {
         IllegalArgumentException erro = assertThrows(IllegalArgumentException.class, () -> Cpf.de(digitado));
-        assertEquals("O CPF deve ter 11 dígitos.", erro.getMessage());
+        assertEquals("The CPF must have 11 digits.", erro.getMessage());
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"246.813.579-2a", "246/813/579-28", "２４６８１３５７９２８"})
     void caracteresNaoPermitidosSaoRecusados(String digitado) {
         IllegalArgumentException erro = assertThrows(IllegalArgumentException.class, () -> Cpf.de(digitado));
-        assertEquals("O CPF deve conter apenas números, pontos e hífen.", erro.getMessage());
+        assertEquals("The CPF can only contain digits, dots and a hyphen.", erro.getMessage());
     }
 
     @ParameterizedTest
@@ -60,14 +60,14 @@ class CpfTest {
             "888.888.888-88", "999.999.999-99"})
     void sequenciasRepetidasSaoRecusadasMesmoSatisfazendoOCalculo(String digitado) {
         IllegalArgumentException erro = assertThrows(IllegalArgumentException.class, () -> Cpf.de(digitado));
-        assertEquals("CPF inválido: todos os dígitos são iguais.", erro.getMessage());
+        assertEquals("Invalid CPF: all digits are the same.", erro.getMessage());
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"246.813.579-29", "246.813.579-38", "246.813.579-00", "246.813.578-28"})
     void digitosVerificadoresErradosSaoRecusados(String digitado) {
         IllegalArgumentException erro = assertThrows(IllegalArgumentException.class, () -> Cpf.de(digitado));
-        assertEquals("CPF inválido: os dígitos verificadores não conferem.", erro.getMessage());
+        assertEquals("Invalid CPF: the check digits don't match.", erro.getMessage());
     }
 
     @Test

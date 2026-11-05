@@ -45,35 +45,35 @@ class JanelaBancoTest {
 
     @Test void cadastroDepositoSaqueExtratoECancelamento() throws Exception {
         abrir();
-        clicar("Abrir primeira conta");
+        clicar("Open first account");
         preencher("nome", "Ana Teste");
         preencher("cpf", "123");
-        clicar("Criar conta");
-        aguardarMensagem("11 dígitos");
+        clicar("Create account");
+        aguardarMensagem("11 digits");
         assertTrue(banco.listarContas().isEmpty());
         preencher("cpf", "24681357928");
-        clicar("Criar conta");
-        aguardarMensagem("criada com sucesso");
+        clicar("Create account");
+        aguardarMensagem("created");
         assertEquals(1, banco.listarContas().size());
-        clicar("Depositar");
+        clicar("Deposit");
         for (String invalido : new String[]{"abc", "-10", "1.234,56", "10,005", "0"}) {
             preencher("valor", invalido);
-            clicar("Confirmar depósito");
-            aguardar(() -> mensagem().contains("inválido") || mensagem().contains("maior que zero"));
+            clicar("Confirm deposit");
+            aguardar(() -> mensagem().contains("Invalid") || mensagem().contains("greater than zero"));
             assertEquals(new BigDecimal("0.00"), conta(1000).getSaldo());
         }
         preencher("valor", "150,50");
-        clicar("Cancelar");
+        clicar("Cancel");
         assertEquals(new BigDecimal("0.00"), conta(1000).getSaldo());
-        operar("Depositar", "Confirmar depósito", "150,50");
-        aguardarMensagem("concluído");
+        operar("Deposit", "Confirm deposit", "150,50");
+        aguardarMensagem("completed");
         edt(() -> assertEquals("R$ 150,50", ((JLabel) nome("saldo")).getText()));
-        operar("Sacar", "Confirmar saque", "150,51");
-        aguardarMensagem("Saldo insuficiente");
+        operar("Withdraw", "Confirm withdrawal", "150,51");
+        aguardarMensagem("Insufficient balance");
         preencher("valor", "50,25");
-        clicar("Confirmar saque");
-        aguardarMensagem("concluído");
-        clicar("Ver todas as movimentações");
+        clicar("Confirm withdrawal");
+        aguardarMensagem("completed");
+        clicar("View all transactions");
         edt(() -> {
             JTable tabela = (JTable) nome("historico");
             assertEquals(2, tabela.getRowCount());
@@ -86,24 +86,24 @@ class JanelaBancoTest {
         duasContas();
         banco.depositar(1000, new BigDecimal("100.00"));
         abrir();
-        clicar("Transferir");
+        clicar("Transfer");
         edt(() -> {
             JComboBox<?> destino = (JComboBox<?>) nome("destino");
             assertEquals(1, destino.getItemCount());
             assertEquals(1001, ((Conta) destino.getItemAt(0)).getNumero());
         });
         preencher("valor", "100,01");
-        clicar("Confirmar transferência");
-        aguardarMensagem("Saldo insuficiente");
+        clicar("Confirm transfer");
+        aguardarMensagem("Insufficient balance");
         assertEquals(new BigDecimal("0.00"), conta(1001).getSaldo());
         preencher("valor", "25,10");
-        clicar("Confirmar transferência");
-        aguardarMensagem("Transferência de R$ 25,10 concluída.");
+        clicar("Confirm transfer");
+        aguardarMensagem("Transfer of R$ 25,10 completed.");
         assertEquals(new BigDecimal("74.90"), conta(1000).getSaldo());
         assertEquals(new BigDecimal("25.10"), recarregar().buscarContaPorNumero(1001).orElseThrow().getSaldo());
         edt(() -> ((JComboBox<?>) nome("contas")).setSelectedIndex(1));
         edt(() -> assertEquals("R$ 25,10", ((JLabel) nome("saldo")).getText()));
-        clicar("Movimentações");
+        clicar("Transactions");
         edt(() -> assertEquals("+ R$ 25,10", ((JTable) nome("historico")).getValueAt(0, 2)));
     }
 
@@ -114,14 +114,14 @@ class JanelaBancoTest {
             sql.execute("CREATE TRIGGER falha BEFORE INSERT ON transacoes BEGIN SELECT RAISE(ABORT, 'teste'); END");
         }
         abrir();
-        operar("Depositar", "Confirmar depósito", "15,00");
-        aguardarMensagem("desfeita");
+        operar("Deposit", "Confirm deposit", "15,00");
+        aguardarMensagem("undone");
         assertEquals(new BigDecimal("0.00"), conta(1000).getSaldo());
         assertTrue(conta(1000).getHistorico().isEmpty());
         try (var conexao = DriverManager.getConnection("jdbc:sqlite:" + arquivo);
              var sql = conexao.createStatement()) { sql.execute("DROP TRIGGER falha"); }
-        clicar("Confirmar depósito");
-        aguardarMensagem("concluído");
+        clicar("Confirm deposit");
+        aguardarMensagem("completed");
         assertEquals(1, conta(1000).getHistorico().size());
         assertEquals(new BigDecimal("15.00"), recarregar().buscarContaPorNumero(1000).orElseThrow().getSaldo());
     }
@@ -131,24 +131,24 @@ class JanelaBancoTest {
         banco.depositar(1000, new BigDecimal("1000.00"));
         abrir();
         edt(() -> janela.setSize(janela.getMinimumSize()));
-        clicar("Rendimento mensal");
-        clicar("Confirmar rendimento");
-        aguardarMensagem("Rendimento de R$ 5,00 aplicado");
-        clicar("Rendimento mensal");
-        clicar("Confirmar rendimento");
-        aguardarMensagem("já foi aplicado");
-        clicar("Cancelar");
-        clicar("Movimentações");
-        clicar("Visão geral");
+        clicar("Monthly interest");
+        clicar("Confirm interest");
+        aguardarMensagem("Interest of R$ 5,00 applied");
+        clicar("Monthly interest");
+        clicar("Confirm interest");
+        aguardarMensagem("already been applied");
+        clicar("Cancel");
+        clicar("Transactions");
+        clicar("Overview");
         edt(() -> assertEquals("R$ 1.005,00", ((JLabel) nome("saldo")).getText()));
     }
 
     @Test void transferenciaSemDestinoFicaDesabilitada() throws Exception {
         banco.abrirContaPoupanca(new Cliente("Ana", "24681357928"));
         abrir();
-        clicar("Transferir");
-        edt(() -> assertFalse(botao("Confirmar transferência").isEnabled()));
-        clicar("Cancelar");
+        clicar("Transfer");
+        edt(() -> assertFalse(botao("Confirm transfer").isEnabled()));
+        clicar("Cancel");
         edt(() -> assertNotNull(nome("saldo")));
     }
 
@@ -169,16 +169,16 @@ class JanelaBancoTest {
         banco.abrirContaPoupanca(new Cliente("Ana", "24681357928"));
         abrir();
         try {
-            operar("Depositar", "Confirmar depósito", "10");
+            operar("Deposit", "Confirm deposit", "10");
             assertTrue(iniciou.await(3, TimeUnit.SECONDS));
             edt(() -> {
-                assertFalse(botao("Confirmar depósito").isEnabled());
-                botao("Confirmar depósito").doClick();
+                assertFalse(botao("Confirm deposit").isEnabled());
+                botao("Confirm deposit").doClick();
                 janela.dispatchEvent(new WindowEvent(janela, WindowEvent.WINDOW_CLOSING));
                 assertTrue(janela.isDisplayable());
             });
         } finally { liberar.countDown(); }
-        aguardarMensagem("concluído");
+        aguardarMensagem("completed");
         assertEquals(1, conta(1000).getHistorico().size());
         assertEquals(new BigDecimal("10.00"), conta(1000).getSaldo());
     }
@@ -187,7 +187,7 @@ class JanelaBancoTest {
         abrir();
         edt(() -> {
             JViewport viewport = (JViewport) SwingUtilities.getAncestorOfClass(
-                    JViewport.class, botao("Abrir primeira conta"));
+                    JViewport.class, botao("Open first account"));
             assertEquals(Tema.FUNDO, viewport.getBackground());
             assertFalse(nome("contas").isVisible());
         });
@@ -200,19 +200,19 @@ class JanelaBancoTest {
         banco.transferir(1000, 1001, new BigDecimal("350.00"));
         abrir();
         capturar("resumo");
-        clicar("Transferir");
+        clicar("Transfer");
         capturar("transferencia");
-        clicar("Cancelar");
+        clicar("Cancel");
         edt(() -> janela.setSize(janela.getMinimumSize()));
         capturar("resumo-compacto");
         edt(() -> {
-            JButton transferir = botao("Transferir");
+            JButton transferir = botao("Transfer");
             JViewport viewport = (JViewport) SwingUtilities.getAncestorOfClass(JViewport.class, transferir);
             Rectangle limites = SwingUtilities.convertRectangle(transferir.getParent(), transferir.getBounds(), viewport);
             assertTrue(limites.x >= 0 && limites.x + limites.width <= viewport.getWidth(),
-                    "A ação Transferir não pode ficar cortada ao reduzir a janela");
+                    "The Transfer action must not be cut off when the window shrinks");
         });
-        clicar("Nova conta");
+        clicar("New account");
         capturar("nova-conta-compacta");
     }
 
@@ -267,7 +267,7 @@ class JanelaBancoTest {
             if (resultado.get()) return;
             Thread.sleep(25);
         } while (System.nanoTime() < limite);
-        edt(() -> fail("Resultado esperado não apareceu. Mensagem: " + mensagem()));
+        edt(() -> fail("Expected result did not appear. Message: " + mensagem()));
     }
     private static void edt(Runnable acao) throws Exception { SwingUtilities.invokeAndWait(acao); }
 }

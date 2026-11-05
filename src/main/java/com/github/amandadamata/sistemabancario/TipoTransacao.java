@@ -2,11 +2,11 @@ package com.github.amandadamata.sistemabancario;
 
 /** Tipos de movimentação registrados no histórico de uma conta. */
 public enum TipoTransacao {
-    DEPOSITO("Depósito", true),
-    SAQUE("Saque", false),
-    TRANSFERENCIA_ENVIADA("Transferência enviada", false),
-    TRANSFERENCIA_RECEBIDA("Transferência recebida", true),
-    RENDIMENTO("Rendimento", true);
+    DEPOSITO("Deposit", true),
+    SAQUE("Withdrawal", false),
+    TRANSFERENCIA_ENVIADA("Transfer sent", false),
+    TRANSFERENCIA_RECEBIDA("Transfer received", true),
+    RENDIMENTO("Interest", true);
 
     private final String descricao;
     private final boolean credito;

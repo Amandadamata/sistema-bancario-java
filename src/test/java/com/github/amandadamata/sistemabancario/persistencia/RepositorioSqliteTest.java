@@ -134,7 +134,7 @@ class RepositorioSqliteTest {
         FalhaPersistenciaException erro = assertThrows(FalhaPersistenciaException.class,
                 () -> Banco.carregar(RELOGIO, new RepositorioSqlite(arquivo)));
 
-        assertTrue(erro.getMessage().contains("o saldo gravado não corresponde ao histórico"), erro.getMessage());
+        assertTrue(erro.getMessage().contains("the saved balance doesn't match the history"), erro.getMessage());
     }
 
     @Test
@@ -148,7 +148,7 @@ class RepositorioSqliteTest {
         FalhaPersistenciaException erro = assertThrows(FalhaPersistenciaException.class,
                 () -> Banco.carregar(RELOGIO, new RepositorioSqlite(arquivo)));
 
-        assertTrue(erro.getMessage().contains("um lançamento não corresponde"), erro.getMessage());
+        assertTrue(erro.getMessage().contains("an entry doesn't match"), erro.getMessage());
     }
 
     @Test
@@ -161,7 +161,7 @@ class RepositorioSqliteTest {
         FalhaPersistenciaException erro = assertThrows(FalhaPersistenciaException.class,
                 () -> new RepositorioSqlite(arquivo).carregar());
 
-        assertTrue(erro.getMessage().contains("O arquivo não foi alterado"), erro.getMessage());
+        assertTrue(erro.getMessage().contains("The file was not changed"), erro.getMessage());
     }
 
     @Test
@@ -205,7 +205,7 @@ class RepositorioSqliteTest {
         FalhaPersistenciaException erro = assertThrows(FalhaPersistenciaException.class,
                 () -> new RepositorioSqlite(arquivo));
 
-        assertTrue(erro.getMessage().contains("versão mais nova"), erro.getMessage());
+        assertTrue(erro.getMessage().contains("newer version"), erro.getMessage());
     }
 
     @Test
@@ -224,7 +224,7 @@ class RepositorioSqliteTest {
         FalhaPersistenciaException erro = assertThrows(FalhaPersistenciaException.class,
                 () -> new RepositorioSqlite(arquivoComum.resolve("banco.db")));
 
-        assertTrue(erro.getMessage().contains("Não foi possível criar a pasta"), erro.getMessage());
+        assertTrue(erro.getMessage().contains("Could not create the folder"), erro.getMessage());
     }
 
     @Test

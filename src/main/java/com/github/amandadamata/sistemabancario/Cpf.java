@@ -27,21 +27,21 @@ public final class Cpf {
      */
     public static Cpf de(String texto) {
         if (texto == null || texto.isBlank()) {
-            throw new IllegalArgumentException("O CPF é obrigatório.");
+            throw new IllegalArgumentException("The CPF is required.");
         }
         String semPontuacao = texto.strip().replace(".", "").replace("-", "").replace(" ", "");
         if (!semPontuacao.chars().allMatch(c -> c >= '0' && c <= '9')) {
-            throw new IllegalArgumentException("O CPF deve conter apenas números, pontos e hífen.");
+            throw new IllegalArgumentException("The CPF can only contain digits, dots and a hyphen.");
         }
         if (semPontuacao.length() != TAMANHO) {
-            throw new IllegalArgumentException("O CPF deve ter 11 dígitos.");
+            throw new IllegalArgumentException("The CPF must have 11 digits.");
         }
         if (semPontuacao.chars().distinct().count() == 1) {
-            throw new IllegalArgumentException("CPF inválido: todos os dígitos são iguais.");
+            throw new IllegalArgumentException("Invalid CPF: all digits are the same.");
         }
         if (digitoVerificador(semPontuacao, 9) != semPontuacao.charAt(9) - '0'
                 || digitoVerificador(semPontuacao, 10) != semPontuacao.charAt(10) - '0') {
-            throw new IllegalArgumentException("CPF inválido: os dígitos verificadores não conferem.");
+            throw new IllegalArgumentException("Invalid CPF: the check digits don't match.");
         }
         return new Cpf(semPontuacao);
     }

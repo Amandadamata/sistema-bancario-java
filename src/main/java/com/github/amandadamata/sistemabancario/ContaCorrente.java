@@ -10,7 +10,7 @@ public final class ContaCorrente extends Conta {
     ContaCorrente(int numero, Cliente titular, BigDecimal limiteChequeEspecial, Clock relogio) {
         super(numero, titular, relogio);
         this.limiteChequeEspecial = Moeda.validarValorNaoNegativo(limiteChequeEspecial,
-                "O limite do cheque especial deve ser maior ou igual a zero.");
+                "The overdraft limit must be zero or greater.");
     }
 
     /** O cheque especial permite usar o limite além do saldo, deixando o saldo negativo. */
@@ -27,7 +27,7 @@ public final class ContaCorrente extends Conta {
 
     @Override
     public String getTipoConta() {
-        return "Conta Corrente";
+        return "Checking Account";
     }
 
     public BigDecimal getLimiteChequeEspecial() {

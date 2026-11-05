@@ -225,8 +225,8 @@ class ContaTest {
         Conta poupanca = novaPoupanca();
 
         assertAll(
-                () -> assertEquals("Conta Corrente", corrente.getTipoConta()),
-                () -> assertEquals("Conta Poupança", poupanca.getTipoConta()));
+                () -> assertEquals("Checking Account", corrente.getTipoConta()),
+                () -> assertEquals("Savings Account", poupanca.getTipoConta()));
     }
 
     @Test

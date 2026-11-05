@@ -133,7 +133,7 @@ class BancoPersistenciaTest {
                 () -> banco.depositar(9999, valor("10.00")));
 
         assertAll(
-                () -> assertEquals("Conta não encontrada: 9999", erro.getMessage()),
+                () -> assertEquals("Account not found: 9999", erro.getMessage()),
                 () -> assertTrue(repositorio.chamadas.isEmpty()));
     }
 
@@ -171,7 +171,7 @@ class BancoPersistenciaTest {
         FalhaPersistenciaException erro = assertThrows(FalhaPersistenciaException.class,
                 () -> Banco.carregar(relogio, repositorio));
 
-        assertTrue(erro.getMessage().contains("conta 1000"), erro.getMessage());
+        assertTrue(erro.getMessage().contains("account 1000"), erro.getMessage());
     }
 
     @Test
@@ -191,7 +191,7 @@ class BancoPersistenciaTest {
         Conta segundaContaDaAna = banco.abrirContaCorrente(new Cliente("ana", "24681357928"), valor("0"));
 
         assertAll(
-                () -> assertEquals("Este CPF já está cadastrado para outro titular.", erro.getMessage()),
+                () -> assertEquals("This CPF is already registered to another holder.", erro.getMessage()),
                 () -> assertEquals(1001, segundaContaDaAna.getNumero()));
     }
 

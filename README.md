@@ -35,7 +35,7 @@ Adding the desktop interface didn't change any of the original domain, persisten
 
 ![Terminal demo: a rejected CPF, two new accounts, an overdraft withdrawal, a refused withdrawal, a transfer, the statement and reopening the app](docs/assets/demo-terminal.gif)
 
-*Account 1000 has a R$ 200 overdraft limit. It gets R$ 100, then pays R$ 250 using the overdraft. A further R$ 100 is refused, because only R$ 50 is left. After closing and reopening, the balances are still there. (The app's interface is in Portuguese.)*
+*Account 1000 has a R$ 200 overdraft limit. It gets R$ 100, then pays R$ 250 using the overdraft. A further R$ 100 is refused, because only R$ 50 is left. After closing and reopening, the balances are still there.*
 
 ## Features
 
@@ -45,7 +45,7 @@ Adding the desktop interface didn't change any of the original domain, persisten
 - Statement with date, type, signed amount, resulting balance and the other account in a transfer.
 - CPF (Brazilian tax ID) check-digit validation, with one CPF per account holder.
 - Data saved in SQLite, so accounts and statements survive a restart.
-- Brazilian number format: you can type `100,50` or `100.50`, and you see `R$ 1.234,56`.
+- Amounts in Brazilian reais: you can type `100.50` or `100,50`, and you see `R$ 1.234,56`.
 - In the desktop app: errors keep the form filled in, saving runs in the background so the window never freezes, and a double click can't submit twice.
 
 ## What this project shows
@@ -127,7 +127,7 @@ More details and the alternatives I considered are in [DESIGN_DECISIONS.md](docs
 
 | Package | What you need | How to open |
 |---|---|---|
-| [`Linha-JAR-portatil.zip`](https://github.com/Amandadamata/sistema-bancario-java/releases/latest/download/Linha-JAR-portatil.zip) | Java 17 or newer, on any system | `java -jar Linha.jar` for the window, or `java -jar Linha.jar --terminal` for the menu |
+| [`Linha-portable-JAR.zip`](https://github.com/Amandadamata/sistema-bancario-java/releases/latest/download/Linha-portable-JAR.zip) | Java 17 or newer, on any system | `java -jar Linha.jar` for the window, or `java -jar Linha.jar --terminal` for the menu |
 | [`Linha-Mac-AppleSilicon.zip`](https://github.com/Amandadamata/sistema-bancario-java/releases/latest/download/Linha-Mac-AppleSilicon.zip) | A Mac with Apple Silicon; Java is included | Unzip and open `Linha.app` |
 
 The Mac app isn't signed with an Apple developer certificate, so macOS blocks it the first time. To allow it, try to open it once, then go to **System Settings → Privacy & Security** and click **Open Anyway**.
@@ -145,13 +145,13 @@ cd sistema-bancario-java
 Open the desktop app:
 
 ```bash
-java -jar target/sistema-bancario-java-1.2.0.jar
+java -jar target/sistema-bancario-java-1.3.0.jar
 ```
 
 Open the terminal menu:
 
 ```bash
-java -jar target/sistema-bancario-java-1.2.0.jar --terminal
+java -jar target/sistema-bancario-java-1.3.0.jar --terminal
 ```
 
 On Windows, use `mvnw.cmd`. In IntelliJ IDEA, open the `pom.xml`, choose a JDK 17 or newer, and run `DesktopMain` (window) or `Main` (terminal).
@@ -204,7 +204,7 @@ scripts/                        # macOS packaging and demo recording
 docs/                           # architecture, design decisions, testing, evolution notes
 ```
 
-Class and method names are in Portuguese because the project uses Brazilian banking terms.
+The app itself is in English. Class and method names are still in Portuguese, from when this started as a study project in Brazil.
 
 ## Limits and what's next
 

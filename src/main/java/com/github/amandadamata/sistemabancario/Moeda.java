@@ -40,7 +40,7 @@ public final class Moeda {
         String valor = texto == null ? "" : texto.trim();
         if (!FORMATO_ENTRADA.matcher(valor).matches()) {
             throw new IllegalArgumentException(
-                    "Valor inválido. Use números com até duas casas decimais (ex: 100,50).");
+                    "Invalid amount. Use numbers with up to two decimal places (e.g. 100.50).");
         }
         return new BigDecimal(valor.replace(',', '.')).setScale(ESCALA);
     }
@@ -49,7 +49,7 @@ public final class Moeda {
     public static String formatar(BigDecimal valor) {
         DecimalFormat formato = new DecimalFormat("#,##0.00", DecimalFormatSymbols.getInstance(PT_BR));
         formato.setRoundingMode(ARREDONDAMENTO);
-        return "R$ " + formato.format(Objects.requireNonNull(valor, "O valor é obrigatório."));
+        return "R$ " + formato.format(Objects.requireNonNull(valor, "The amount is required."));
     }
 
     /**
@@ -75,7 +75,7 @@ public final class Moeda {
     private static BigDecimal validarEscala(BigDecimal valor) {
         BigDecimal semZerosExtras = valor.stripTrailingZeros();
         if (semZerosExtras.scale() > ESCALA) {
-            throw new IllegalArgumentException("O valor deve ter no máximo duas casas decimais.");
+            throw new IllegalArgumentException("The amount can have at most two decimal places.");
         }
         return valor.setScale(ESCALA);
     }

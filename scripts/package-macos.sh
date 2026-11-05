@@ -1,22 +1,22 @@
 #!/bin/sh
-# Gera dist/Linha.app (com Java incluído) e os dois ZIPs publicados nas releases.
+# Builds dist/Linha.app (Java included) and the two ZIPs published with each release.
 set -eu
 cd "$(dirname "$0")/.."
 if [ "$(uname -s)" != Darwin ]; then
-  echo 'Gere o aplicativo macOS em um Mac.' >&2
+  echo 'Build the macOS app on a Mac.' >&2
   exit 1
 fi
 if [ -e dist/Linha.app ]; then
-  echo 'dist/Linha.app já existe. Mova a versão anterior antes de gerar outra.' >&2
+  echo 'dist/Linha.app already exists. Move the previous version before building another.' >&2
   exit 1
 fi
-VERSAO=1.2.0
-JAR="sistema-bancario-java-$VERSAO.jar"
+VERSION=1.3.0
+JAR="sistema-bancario-java-$VERSION.jar"
 
 ./mvnw --batch-mode clean verify
 mkdir -p target/jpackage-input dist
 cp "target/$JAR" target/jpackage-input/
-jpackage --type app-image --name Linha --app-version "$VERSAO" \
+jpackage --type app-image --name Linha --app-version "$VERSION" \
   --input target/jpackage-input --main-jar "$JAR" \
   --main-class com.github.amandadamata.sistemabancario.DesktopMain \
   --mac-package-identifier com.github.amandadamata.linha \
@@ -24,14 +24,14 @@ jpackage --type app-image --name Linha --app-version "$VERSAO" \
   --java-options '--enable-native-access=ALL-UNNAMED' \
   --dest dist
 
-# --norsrc e --noextattr evitam a pasta __MACOSX e os arquivos ._ dentro do ZIP.
-rm -f dist/Linha-Mac-AppleSilicon.zip dist/Linha-JAR-portatil.zip
+# --norsrc and --noextattr keep the __MACOSX folder and ._ files out of the ZIP.
+rm -f dist/Linha-Mac-AppleSilicon.zip dist/Linha-portable-JAR.zip
 ditto -c -k --norsrc --noextattr --keepParent dist/Linha.app dist/Linha-Mac-AppleSilicon.zip
 
-rm -rf dist/linha-jar-portatil
-mkdir dist/linha-jar-portatil
-cp "target/$JAR" dist/linha-jar-portatil/Linha.jar
-cp src/packaging/LEIA-ME.txt dist/linha-jar-portatil/
-ditto -c -k --norsrc --noextattr --keepParent dist/linha-jar-portatil dist/Linha-JAR-portatil.zip
+rm -rf dist/linha-portable-jar
+mkdir dist/linha-portable-jar
+cp "target/$JAR" dist/linha-portable-jar/Linha.jar
+cp src/packaging/README.txt dist/linha-portable-jar/
+ditto -c -k --norsrc --noextattr --keepParent dist/linha-portable-jar dist/Linha-portable-JAR.zip
 
-echo 'Gerados: dist/Linha.app, dist/Linha-Mac-AppleSilicon.zip e dist/Linha-JAR-portatil.zip'
+echo 'Built: dist/Linha.app, dist/Linha-Mac-AppleSilicon.zip and dist/Linha-portable-JAR.zip'

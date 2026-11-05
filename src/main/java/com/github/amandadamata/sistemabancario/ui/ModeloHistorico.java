@@ -9,7 +9,7 @@ import java.util.List;
 
 /** Traduz o extrato existente para linhas de uma JTable, sem alterar o domínio. */
 final class ModeloHistorico extends AbstractTableModel {
-    private static final String[] COLUNAS = {"Data e hora", "Movimentação", "Valor", "Saldo após"};
+    private static final String[] COLUNAS = {"Date and time", "Transaction", "Amount", "Balance after"};
     private static final DateTimeFormatter DATA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
     private final List<Transacao> linhas;
 
@@ -29,7 +29,7 @@ final class ModeloHistorico extends AbstractTableModel {
         return switch (coluna) {
             case 0 -> transacao.dataHora().format(DATA);
             case 1 -> transacao.tipo().getDescricao() + (transacao.contaRelacionada().isPresent()
-                    ? " · conta " + transacao.contaRelacionada().getAsInt() : "");
+                    ? " · account " + transacao.contaRelacionada().getAsInt() : "");
             case 2 -> (transacao.tipo().isCredito() ? "+ " : "− ") + Moeda.formatar(transacao.valor());
             case 3 -> Moeda.formatar(transacao.saldoResultante());
             default -> throw new IndexOutOfBoundsException(coluna);
