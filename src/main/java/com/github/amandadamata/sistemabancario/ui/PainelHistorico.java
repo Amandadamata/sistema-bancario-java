@@ -9,17 +9,17 @@ final class PainelHistorico extends JPanel {
     PainelHistorico(Conta conta, boolean completo) {
         super(new BorderLayout(0, 12));
         setOpaque(false);
-        add(Componentes.texto(completo ? "Movimentações" : "Últimas movimentações", 20, true), BorderLayout.NORTH);
+        add(Componentes.texto(completo ? "Transactions" : "Recent transactions", 20, true), BorderLayout.NORTH);
         ModeloHistorico modelo = new ModeloHistorico(conta, completo ? Integer.MAX_VALUE : 5);
         if (modelo.getRowCount() == 0) {
-            JTextArea vazio = Componentes.explicacao("Nenhuma movimentação por enquanto.\nFaça um depósito para começar seu histórico.");
+            JTextArea vazio = Componentes.explicacao("No transactions yet.\nMake a deposit to start your history.");
             vazio.setBorder(BorderFactory.createEmptyBorder(24, 20, 24, 20));
             add(vazio);
             return;
         }
         JTable tabela = new JTable(modelo);
         tabela.setName("historico");
-        tabela.getAccessibleContext().setAccessibleName("Histórico de movimentações, mais recentes primeiro");
+        tabela.getAccessibleContext().setAccessibleName("Transaction history, newest first");
         tabela.setRowHeight(44);
         tabela.setShowGrid(false);
         tabela.setIntercellSpacing(new Dimension(0, 0));

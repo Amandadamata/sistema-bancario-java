@@ -14,12 +14,12 @@ import java.time.Clock;
 import java.util.function.Predicate;
 
 /**
- * Grava o vídeo de demonstração da interface. A janela, os cliques e os dados são os reais
- * (JanelaBanco, Banco e um SQLite temporário); cada quadro é pintado pelos próprios componentes
- * Swing. A moldura, o ponteiro, o cursor de texto e as legendas são desenhados por este script.
+ * Records the desktop demo video. The window, clicks and data are real (JanelaBanco, Banco and a
+ * temporary SQLite file); each frame is painted by the Swing components themselves. The title bar,
+ * pointer, text cursor and captions are drawn by this script.
  *
- * Uso, na raiz do projeto, depois de ./mvnw package (requer ffmpeg):
- *   java -cp target/sistema-bancario-java-1.2.0.jar scripts/demo/GravarDemoInterface.java saida.mp4
+ * Usage, from the project root, after ./mvnw package (needs ffmpeg):
+ *   java -cp target/sistema-bancario-java-1.3.0.jar scripts/demo/GravarDemoInterface.java out.mp4
  */
 public class GravarDemoInterface {
     private static final int LARGURA = 1920, ALTURA = 1080, FPS = 30, BARRA = 28;
@@ -41,7 +41,7 @@ public class GravarDemoInterface {
     private GravarDemoInterface(OutputStream video, Path arquivo) { this.video = video; this.arquivo = arquivo; }
 
     public static void main(String[] args) throws Exception {
-        // Tons de cinza: a suavização LCD criaria franjas coloridas no vídeo.
+        // Grayscale: LCD smoothing would add colored fringes to the video.
         System.setProperty("awt.useSystemAAFontSettings", "on");
         Path saida = Path.of(args[0]).toAbsolutePath();
         Path pasta = Files.createTempDirectory("linha-demo");
@@ -53,53 +53,53 @@ public class GravarDemoInterface {
         try (OutputStream video = ffmpeg.getOutputStream()) {
             new GravarDemoInterface(video, pasta.resolve("demo.db")).roteiro();
         }
-        if (ffmpeg.waitFor() != 0) throw new IllegalStateException("ffmpeg falhou");
-        System.out.println("Vídeo: " + saida);
+        if (ffmpeg.waitFor() != 0) throw new IllegalStateException("ffmpeg failed");
+        System.out.println("Video: " + saida);
         System.exit(0);
     }
 
     private void roteiro() throws Exception {
         abrirJanela();
-        legenda("Do terminal para a janela", "O mesmo sistema bancário em Java, agora com interface gráfica.");
+        legenda("From the terminal to a window", "The same Java banking system, now with a desktop interface.");
         segurar(2.6);
 
-        legenda("Abrir uma conta", "O CPF é conferido pelos dígitos verificadores.");
-        clicar("Abrir primeira conta");
+        legenda("Opening an account", "The CPF, Brazil's tax ID, is verified by its check digits.");
+        clicar("Open first account");
         digitar("nome", "Bruno Lima");
         digitar("cpf", "246.813.579-00");
-        digitar("limite", "200,00", true);
-        clicar("Criar conta");
+        digitar("limite", "200.00", true);
+        clicar("Create account");
         aguardarMensagem("CPF");
-        legenda("CPF inválido, nada é criado", "O erro aparece na tela e o formulário continua preenchido.");
+        legenda("Invalid CPF, nothing is created", "The error shows on screen and the form stays filled in.");
         segurar(2.6);
         digitar("cpf", "246.813.579-28", true);
-        clicar("Criar conta");
-        aguardarMensagem("criada");
-        legenda("Conta corrente criada", "Limite de R$\u00A0200,00 no cheque especial.");
+        clicar("Create account");
+        aguardarMensagem("created");
+        legenda("Checking account created", "With an overdraft limit of R$\u00A0200,00.");
         segurar(2.2);
 
-        legenda("Depósito", "Valores exatos com BigDecimal, gravados em centavos.");
-        clicar("Depositar");
-        digitar("valor", "1500,00");
-        clicar("Confirmar depósito");
-        aguardarMensagem("concluído");
+        legenda("Deposit", "Exact amounts with BigDecimal, stored as whole cents.");
+        clicar("Deposit");
+        digitar("valor", "1500.00");
+        clicar("Confirm deposit");
+        aguardarMensagem("completed");
         segurar(2.0);
 
-        legenda("Saque acima do disponível", "Com o limite, o disponível é R$\u00A01.700,00. O pedido de R$\u00A02.000,00 é recusado.");
-        clicar("Sacar");
-        digitar("valor", "2000,00");
-        clicar("Confirmar saque");
-        aguardarMensagem("insuficiente");
+        legenda("Withdrawing too much", "With the limit, R$\u00A01.700,00 is available. A request for R$\u00A02.000,00 is refused.");
+        clicar("Withdraw");
+        digitar("valor", "2000.00");
+        clicar("Confirm withdrawal");
+        aguardarMensagem("Insufficient");
         segurar(3.0);
 
-        legenda("Cheque especial", "Com R$\u00A01.600,00 o saque passa, e a conta fica negativa dentro do limite.");
-        digitar("valor", "1600,00", true);
-        clicar("Confirmar saque");
-        aguardarMensagem("concluído");
+        legenda("Overdraft", "R$\u00A01.600,00 goes through, and the balance goes negative within the limit.");
+        digitar("valor", "1600.00", true);
+        clicar("Confirm withdrawal");
+        aguardarMensagem("completed");
         segurar(3.0);
 
-        legenda("Conta poupança", "Outro tipo de conta, com regras próprias, sem cheque especial.");
-        clicar("Nova conta");
+        legenda("Savings account", "Another account type, with its own rules and no overdraft.");
+        clicar("New account");
         digitar("nome", "Ana Souza");
         digitar("cpf", "135.792.468-28");
         mover(buscarNome("tipo"));
@@ -107,40 +107,40 @@ public class GravarDemoInterface {
         edt(() -> ((JComboBox<?>) buscarNome("tipo")).setSelectedIndex(1));
         renderizar();
         segurar(0.6);
-        clicar("Criar conta");
-        aguardarMensagem("criada");
-        clicar("Depositar");
-        digitar("valor", "1000,00");
-        clicar("Confirmar depósito");
-        aguardarMensagem("concluído");
+        clicar("Create account");
+        aguardarMensagem("created");
+        clicar("Deposit");
+        digitar("valor", "1000.00");
+        clicar("Confirm deposit");
+        aguardarMensagem("completed");
         segurar(1.2);
 
-        legenda("Rendimento mensal", "0,5% sobre o saldo, no máximo uma vez por mês.");
-        clicar("Rendimento mensal");
+        legenda("Monthly interest", "0.5% of the balance, at most once a month.");
+        clicar("Monthly interest");
         segurar(1.2);
-        clicar("Confirmar rendimento");
-        aguardarMensagem("aplicado");
+        clicar("Confirm interest");
+        aguardarMensagem("applied");
         segurar(2.4);
-        legenda("Segunda tentativa no mês", "A mesma regra do terminal recusa o rendimento repetido.");
-        clicar("Rendimento mensal");
-        clicar("Confirmar rendimento");
-        aguardarMensagem("já foi aplicado");
+        legenda("Second try in the same month", "The same rule as the terminal refuses it.");
+        clicar("Monthly interest");
+        clicar("Confirm interest");
+        aguardarMensagem("already been applied");
         segurar(2.8);
-        clicar("Cancelar");
+        clicar("Cancel");
 
-        legenda("Transferência", "As duas contas são gravadas juntas, em uma única transação SQL.");
-        clicar("Transferir");
-        digitar("valor", "250,00");
+        legenda("Transfer", "Both accounts are saved together, in a single SQL transaction.");
+        clicar("Transfer");
+        digitar("valor", "250.00");
         segurar(0.8);
-        clicar("Confirmar transferência");
-        aguardarMensagem("concluída");
+        clicar("Confirm transfer");
+        aguardarMensagem("completed");
         segurar(2.4);
 
-        legenda("Extrato", "Data, tipo, conta relacionada e saldo após cada operação.");
-        clicar("Movimentações");
+        legenda("Statement", "Date, type, other account and the balance after each transaction.");
+        clicar("Transactions");
         segurar(3.4);
 
-        legenda("Fechar e abrir de novo", "Contas e extratos continuam lá: os dados ficam em SQLite.");
+        legenda("Close and reopen", "Accounts and statements are still there, stored in SQLite.");
         segurar(1.0);
         edt(() -> janela.dispose());
         abrirJanela();
@@ -149,8 +149,8 @@ public class GravarDemoInterface {
         renderizar();
         segurar(3.0);
 
-        legenda("Linha · Sistema Bancário",
-                "Java 17, Swing, SQLite e testes automatizados.\n\ngithub.com/Amandadamata/\nsistema-bancario-java");
+        legenda("Linha · Banking System",
+                "Java 17, Swing, SQLite and automated tests.\n\ngithub.com/Amandadamata/\nsistema-bancario-java");
         segurar(4.5);
         edt(() -> janela.dispose());
     }
@@ -235,7 +235,7 @@ public class GravarDemoInterface {
             if (texto[0].contains(trecho)) { renderizar(); return; }
             Thread.sleep(25);
         }
-        throw new IllegalStateException("Mensagem esperada não apareceu: " + trecho);
+        throw new IllegalStateException("Expected message did not appear: " + trecho);
     }
 
     private void segurar(double segundos) throws Exception { escrever((int) Math.round(segundos * FPS)); }
@@ -309,7 +309,7 @@ public class GravarDemoInterface {
         paragrafo(g, detalhe, x, y, largura, 42);
         g.setColor(Color.decode("#8FA3AB"));
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 22));
-        g.drawString("Projeto educacional · dados fictícios", x, ALTURA - 66);
+        g.drawString("Study project · made-up data", x, ALTURA - 66);
     }
 
     private static int paragrafo(Graphics2D g, String texto, int x, int y, int largura, int entrelinha) {
@@ -352,7 +352,7 @@ public class GravarDemoInterface {
 
     private Component buscar(Predicate<Component> condicao) {
         Component c = buscar(janela.getContentPane(), condicao);
-        if (c == null) throw new IllegalStateException("Componente não encontrado");
+        if (c == null) throw new IllegalStateException("Component not found");
         return c;
     }
 

@@ -46,12 +46,12 @@ public class Main {
         try {
             Path arquivo = resolverArquivo(System.getenv(VARIAVEL_ARQUIVO));
             banco = Banco.carregar(Clock.systemDefaultZone(), new RepositorioSqlite(arquivo));
-            saida.println("Dados em: " + arquivo.toAbsolutePath().normalize());
+            saida.println("Data in: " + arquivo.toAbsolutePath().normalize());
         } catch (InvalidPathException e) {
-            saida.println("A variável " + VARIAVEL_ARQUIVO + " contém um caminho inválido.");
+            saida.println("The variable " + VARIAVEL_ARQUIVO + " contains an invalid path.");
             return;
         } catch (FalhaPersistenciaException e) {
-            saida.println("Não foi possível abrir os dados salvos. O sistema não será iniciado.");
+            saida.println("Could not open the saved data. The system will not start.");
             saida.println(e.getMessage());
             return;
         }
@@ -66,13 +66,13 @@ public class Main {
     }
 
     void executar() {
-        saida.println("=== SISTEMA BANCÁRIO ===\n");
+        saida.println("=== BANKING SYSTEM ===\n");
 
         try {
             int opcao;
             do {
                 exibirMenu();
-                opcao = lerInteiro("Escolha uma opção: ");
+                opcao = lerInteiro("Choose an option: ");
 
                 switch (opcao) {
                     case 1 -> criarConta();
@@ -82,54 +82,54 @@ public class Main {
                     case 5 -> exibirExtrato();
                     case 6 -> listarContas();
                     case 7 -> aplicarRendimentoPoupanca();
-                    case 0 -> saida.println("Encerrando o sistema. Até logo!");
-                    default -> saida.println("Opção inválida. Tente novamente.\n");
+                    case 0 -> saida.println("Shutting down. Goodbye!");
+                    default -> saida.println("Invalid option. Try again.\n");
                 }
             } while (opcao != 0);
         } catch (NoSuchElementException e) {
-            saida.println("\nEntrada encerrada. Encerrando o sistema com segurança.");
+            saida.println("\nInput ended. Shutting down safely.");
         }
     }
 
     private void exibirMenu() {
         saida.println("------------ MENU ------------");
-        saida.println("1 - Criar conta");
-        saida.println("2 - Depositar");
-        saida.println("3 - Sacar");
-        saida.println("4 - Transferir");
-        saida.println("5 - Ver extrato");
-        saida.println("6 - Listar contas");
-        saida.println("7 - Aplicar rendimento mensal (poupança)");
-        saida.println("0 - Sair");
+        saida.println("1 - Create account");
+        saida.println("2 - Deposit");
+        saida.println("3 - Withdraw");
+        saida.println("4 - Transfer");
+        saida.println("5 - View statement");
+        saida.println("6 - List accounts");
+        saida.println("7 - Apply monthly interest (savings)");
+        saida.println("0 - Exit");
         saida.println("-------------------------------");
     }
 
     private void criarConta() {
-        String nome = lerTextoObrigatorio("Nome do titular: ");
+        String nome = lerTextoObrigatorio("Account holder name: ");
         Cpf cpf = lerCpf();
         Cliente cliente = new Cliente(nome, cpf);
 
-        saida.println("Tipo de conta: 1 - Corrente | 2 - Poupança");
+        saida.println("Account type: 1 - Checking | 2 - Savings");
         int tipo;
         do {
-            tipo = lerInteiro("Escolha: ");
+            tipo = lerInteiro("Choice: ");
             if (tipo != 1 && tipo != 2) {
-                saida.println("Tipo inválido. Digite 1 para Corrente ou 2 para Poupança.");
+                saida.println("Invalid type. Enter 1 for Checking or 2 for Savings.");
             }
         } while (tipo != 1 && tipo != 2);
 
         try {
             Conta conta;
             if (tipo == 1) {
-                BigDecimal limite = lerValor("Limite do cheque especial: R$ ");
+                BigDecimal limite = lerValor("Overdraft limit: R$ ");
                 conta = banco.abrirContaCorrente(cliente, limite);
             } else {
                 conta = banco.abrirContaPoupanca(cliente);
             }
-            saida.println("Conta criada com sucesso! Número: " + conta.getNumero()
+            saida.println("Account created! Number: " + conta.getNumero()
                     + " (" + conta.getTipoConta() + ")\n");
         } catch (IllegalArgumentException | FalhaPersistenciaException e) {
-            saida.println("Erro: " + e.getMessage() + "\n");
+            saida.println("Error: " + e.getMessage() + "\n");
         }
     }
 
@@ -139,12 +139,12 @@ public class Main {
             return;
         }
 
-        BigDecimal valor = lerValor("Valor do depósito: R$ ");
+        BigDecimal valor = lerValor("Deposit amount: R$ ");
         try {
             banco.depositar(conta.get().getNumero(), valor);
-            saida.println("Depósito realizado com sucesso!\n");
+            saida.println("Deposit completed!\n");
         } catch (IllegalArgumentException | FalhaPersistenciaException e) {
-            saida.println("Erro: " + e.getMessage() + "\n");
+            saida.println("Error: " + e.getMessage() + "\n");
         }
     }
 
@@ -154,34 +154,34 @@ public class Main {
             return;
         }
 
-        BigDecimal valor = lerValor("Valor do saque: R$ ");
+        BigDecimal valor = lerValor("Withdrawal amount: R$ ");
         try {
             banco.sacar(conta.get().getNumero(), valor);
-            saida.println("Saque realizado com sucesso!\n");
+            saida.println("Withdrawal completed!\n");
         } catch (SaldoInsuficienteException | IllegalArgumentException | FalhaPersistenciaException e) {
-            saida.println("Erro: " + e.getMessage() + "\n");
+            saida.println("Error: " + e.getMessage() + "\n");
         }
     }
 
     private void transferir() {
-        saida.println("Conta de ORIGEM:");
+        saida.println("FROM account:");
         Optional<Conta> origem = buscarContaPorNumeroInformado();
         if (origem.isEmpty()) {
             return;
         }
 
-        saida.println("Conta de DESTINO:");
+        saida.println("TO account:");
         Optional<Conta> destino = buscarContaPorNumeroInformado();
         if (destino.isEmpty()) {
             return;
         }
 
-        BigDecimal valor = lerValor("Valor da transferência: R$ ");
+        BigDecimal valor = lerValor("Transfer amount: R$ ");
         try {
             banco.transferir(origem.get().getNumero(), destino.get().getNumero(), valor);
-            saida.println("Transferência realizada com sucesso!\n");
+            saida.println("Transfer completed!\n");
         } catch (SaldoInsuficienteException | IllegalArgumentException | FalhaPersistenciaException e) {
-            saida.println("Erro: " + e.getMessage() + "\n");
+            saida.println("Error: " + e.getMessage() + "\n");
         }
     }
 
@@ -192,20 +192,20 @@ public class Main {
         }
 
         Conta conta = encontrada.get();
-        saida.println("\n===== EXTRATO — Conta " + conta.getNumero() + " (" + conta.getTipoConta()
-                + ") — Titular: " + conta.getTitular().getNome() + " =====");
+        saida.println("\n===== STATEMENT — Account " + conta.getNumero() + " (" + conta.getTipoConta()
+                + ") — Holder: " + conta.getTitular().getNome() + " =====");
         List<Transacao> historico = conta.getHistorico();
         if (historico.isEmpty()) {
-            saida.println("Nenhuma movimentação registrada ainda.");
+            saida.println("No transactions yet.");
         }
         for (Transacao transacao : historico) {
             saida.println(formatarTransacao(transacao));
         }
-        saida.println("Saldo atual: " + Moeda.formatar(conta.getSaldo()));
+        saida.println("Current balance: " + Moeda.formatar(conta.getSaldo()));
         if (conta instanceof ContaCorrente corrente) {
-            saida.println("Limite do cheque especial: "
+            saida.println("Overdraft limit: "
                     + Moeda.formatar(corrente.getLimiteChequeEspecial())
-                    + " | Disponível: " + Moeda.formatar(conta.getSaldoDisponivel()));
+                    + " | Available: " + Moeda.formatar(conta.getSaldoDisponivel()));
         }
         saida.println("=================================================\n");
     }
@@ -213,11 +213,11 @@ public class Main {
     private String formatarTransacao(Transacao transacao) {
         String descricao = transacao.tipo().getDescricao();
         if (transacao.contaRelacionada().isPresent()) {
-            String preposicao = transacao.tipo().isCredito() ? "da" : "para a";
-            descricao += " (" + preposicao + " conta " + transacao.contaRelacionada().getAsInt() + ")";
+            String preposicao = transacao.tipo().isCredito() ? "from" : "to";
+            descricao += " (" + preposicao + " account " + transacao.contaRelacionada().getAsInt() + ")";
         }
         String sinal = transacao.tipo().isCredito() ? "+" : "-";
-        return String.format("[%s] %-42s %s%s | Saldo após: %s",
+        return String.format("[%s] %-42s %s%s | Balance after: %s",
                 transacao.dataHora().format(FORMATO_DATA),
                 descricao,
                 sinal,
@@ -226,13 +226,13 @@ public class Main {
     }
 
     private void listarContas() {
-        saida.println("\n===== CONTAS CADASTRADAS =====");
+        saida.println("\n===== ACCOUNTS =====");
         List<Conta> contas = banco.listarContas();
         if (contas.isEmpty()) {
-            saida.println("Nenhuma conta cadastrada.");
+            saida.println("No accounts yet.");
         }
         for (Conta conta : contas) {
-            saida.printf("Nº %d | %-14s | Titular: %-20s | Saldo: %s%n",
+            saida.printf("No. %d | %-16s | Holder: %-20s | Balance: %s%n",
                     conta.getNumero(), conta.getTipoConta(), conta.getTitular().getNome(),
                     Moeda.formatar(conta.getSaldo()));
         }
@@ -248,21 +248,21 @@ public class Main {
         try {
             BigDecimal rendimento = banco.aplicarRendimento(conta.get().getNumero());
             if (rendimento.signum() > 0) {
-                saida.println("Rendimento de " + Moeda.formatar(rendimento)
-                        + " aplicado à conta " + conta.get().getNumero() + ".\n");
+                saida.println("Interest of " + Moeda.formatar(rendimento)
+                        + " applied to account " + conta.get().getNumero() + ".\n");
             } else {
-                saida.println("O saldo atual não gera rendimento de pelo menos R$ 0,01.\n");
+                saida.println("The current balance doesn't earn at least R$ 0,01 in interest.\n");
             }
         } catch (IllegalArgumentException | IllegalStateException | FalhaPersistenciaException e) {
-            saida.println("Erro: " + e.getMessage() + "\n");
+            saida.println("Error: " + e.getMessage() + "\n");
         }
     }
 
     private Optional<Conta> buscarContaPorNumeroInformado() {
-        int numero = lerInteiro("Número da conta: ");
+        int numero = lerInteiro("Account number: ");
         Optional<Conta> conta = banco.buscarContaPorNumero(numero);
         if (conta.isEmpty()) {
-            saida.println("Conta não encontrada.\n");
+            saida.println("Account not found.\n");
         }
         return conta;
     }
@@ -274,7 +274,7 @@ public class Main {
             try {
                 return Integer.parseInt(entrada);
             } catch (NumberFormatException e) {
-                saida.print("Entrada inválida. Digite um número inteiro: ");
+                saida.print("Invalid input. Enter a whole number: ");
             }
         }
     }
@@ -286,7 +286,7 @@ public class Main {
             try {
                 return Moeda.converter(scanner.nextLine());
             } catch (IllegalArgumentException e) {
-                saida.print(e.getMessage() + " Tente novamente: ");
+                saida.print(e.getMessage() + " Try again: ");
             }
         }
     }
@@ -294,7 +294,7 @@ public class Main {
     /** Repete a pergunta até receber um CPF válido. A mensagem de erro não repete o número. */
     private Cpf lerCpf() {
         while (true) {
-            saida.print("CPF do titular: ");
+            saida.print("Holder's CPF: ");
             try {
                 return Cpf.de(scanner.nextLine());
             } catch (IllegalArgumentException e) {
@@ -310,7 +310,7 @@ public class Main {
             if (!valor.isEmpty()) {
                 return valor;
             }
-            saida.println("Este campo é obrigatório. Digite um valor.");
+            saida.println("This field is required. Enter a value.");
         }
     }
 }

@@ -38,8 +38,8 @@ public final class Banco {
     }
 
     private Banco(Clock relogio, RepositorioBanco repositorio) {
-        this.relogio = Objects.requireNonNull(relogio, "O relógio é obrigatório.");
-        this.repositorio = Objects.requireNonNull(repositorio, "O repositório é obrigatório.");
+        this.relogio = Objects.requireNonNull(relogio, "The clock is required.");
+        this.repositorio = Objects.requireNonNull(repositorio, "The repository is required.");
     }
 
     /**
@@ -53,7 +53,7 @@ public final class Banco {
         for (ContaPersistida registro : repositorio.carregar()) {
             Conta conta = banco.restaurar(registro);
             if (banco.contas.putIfAbsent(conta.getNumero(), conta) != null) {
-                throw new FalhaPersistenciaException("Número de conta repetido: " + conta.getNumero());
+                throw new FalhaPersistenciaException("Duplicate account number: " + conta.getNumero());
             }
             banco.proximoNumero = Math.max(banco.proximoNumero, conta.getNumero() + 1);
         }
@@ -90,7 +90,7 @@ public final class Banco {
         Conta origem = contaObrigatoria(numeroOrigem);
         Conta destino = contaObrigatoria(numeroDestino);
         if (origem == destino) {
-            throw new IllegalArgumentException("Não é possível transferir para a mesma conta.");
+            throw new IllegalArgumentException("You can't transfer to the same account.");
         }
         List<Conta> envolvidas = List.of(origem, destino);
         List<EstadoConta> antes = capturarEstados(envolvidas);
@@ -105,7 +105,7 @@ public final class Banco {
      */
     public BigDecimal aplicarRendimento(int numeroConta) {
         if (!(contaObrigatoria(numeroConta) instanceof ContaPoupanca poupanca)) {
-            throw new IllegalArgumentException("Essa operação só está disponível para contas poupança.");
+            throw new IllegalArgumentException("This operation is only available for savings accounts.");
         }
         List<EstadoConta> antes = capturarEstados(List.of(poupanca));
         BigDecimal rendimento = poupanca.aplicarRendimento();
@@ -145,7 +145,7 @@ public final class Banco {
                 envolvidas.get(i).restaurarEstado(estadosAnteriores.get(i));
             }
             throw new FalhaPersistenciaException(
-                    "Não foi possível gravar a operação; ela foi desfeita e nada foi alterado.", falha);
+                    "Could not save the operation; it was undone and nothing changed.", falha);
         }
     }
 
@@ -158,7 +158,7 @@ public final class Banco {
             repositorio.salvar(List.of(conta.paraRegistro()));
         } catch (RuntimeException falha) {
             throw new FalhaPersistenciaException(
-                    "Não foi possível gravar a nova conta; ela não foi criada.", falha);
+                    "Could not save the new account; it was not created.", falha);
         }
         contas.put(conta.getNumero(), conta);
         proximoNumero++;
@@ -167,20 +167,20 @@ public final class Banco {
 
     /** Um CPF identifica um único titular: não pode aparecer com dois nomes diferentes. */
     private void garantirCpfDoMesmoTitular(Cliente titular) {
-        Objects.requireNonNull(titular, "O titular é obrigatório.");
+        Objects.requireNonNull(titular, "The account holder is required.");
         for (Conta conta : contas.values()) {
             Cliente existente = conta.getTitular();
             if (existente.getCpf().equals(titular.getCpf())
                     && !existente.getNome().equalsIgnoreCase(titular.getNome())) {
                 throw new IllegalArgumentException(
-                        "Este CPF já está cadastrado para outro titular.");
+                        "This CPF is already registered to another holder.");
             }
         }
     }
 
     private Conta contaObrigatoria(int numero) {
         return buscarContaPorNumero(numero)
-                .orElseThrow(() -> new IllegalArgumentException("Conta não encontrada: " + numero));
+                .orElseThrow(() -> new IllegalArgumentException("Account not found: " + numero));
     }
 
     /** Reconstrói uma conta gravada e confere se os dados fazem sentido. */
@@ -199,7 +199,7 @@ public final class Banco {
             conta.restaurarHistorico(registro.historico(), registro.saldo());
             return conta;
         } catch (IllegalArgumentException | NullPointerException invalido) {
-            throw new FalhaPersistenciaException("Dados inválidos na conta " + registro.numero()
+            throw new FalhaPersistenciaException("Invalid data in account " + registro.numero()
                     + ": " + invalido.getMessage(), invalido);
         }
     }

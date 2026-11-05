@@ -72,7 +72,7 @@ final class Componentes {
                 label.putClientProperty("html.disable", true);
                 if (value instanceof Conta conta) {
                     label.setText(conta.getNumero() + " · " + conta.getTitular().getNome()
-                            + " · " + conta.getTipoConta().replace("Conta ", ""));
+                            + " · " + conta.getTipoConta().replace("Account ", ""));
                 }
                 return label;
             }

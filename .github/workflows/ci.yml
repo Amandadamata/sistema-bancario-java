@@ -36,7 +36,7 @@ jobs:
       - name: Run the packaged JAR
         run: |
           printf '0\n' | SISTEMA_BANCARIO_DB="$RUNNER_TEMP/smoke.db" \
-            java -jar target/sistema-bancario-java-*.jar --terminal | grep 'Até logo'
+            java -jar target/sistema-bancario-java-*.jar --terminal | grep 'Goodbye'
 
   desktop-ui:
     # Swing flows need a display, so they run on a virtual one, on the minimum supported Java.

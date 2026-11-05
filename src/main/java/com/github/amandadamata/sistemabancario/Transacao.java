@@ -22,11 +22,11 @@ public record Transacao(
         OptionalInt contaRelacionada) {
 
     public Transacao {
-        Objects.requireNonNull(tipo, "O tipo é obrigatório.");
-        Objects.requireNonNull(valor, "O valor é obrigatório.");
-        Objects.requireNonNull(saldoResultante, "O saldo resultante é obrigatório.");
-        Objects.requireNonNull(dataHora, "A data e hora são obrigatórias.");
-        Objects.requireNonNull(contaRelacionada, "Use OptionalInt.empty() quando não houver conta.");
+        Objects.requireNonNull(tipo, "The type is required.");
+        Objects.requireNonNull(valor, "The amount is required.");
+        Objects.requireNonNull(saldoResultante, "The resulting balance is required.");
+        Objects.requireNonNull(dataHora, "The date and time are required.");
+        Objects.requireNonNull(contaRelacionada, "Use OptionalInt.empty() when there is no other account.");
     }
 
     /** Valor com sinal: positivo para créditos e negativo para débitos. */

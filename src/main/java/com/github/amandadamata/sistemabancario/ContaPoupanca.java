@@ -33,8 +33,8 @@ public final class ContaPoupanca extends Conta {
     BigDecimal aplicarRendimento() {
         YearMonth mesAtual = YearMonth.now(getRelogio());
         if (mesAtual.equals(ultimoMesComRendimento)) {
-            throw new IllegalStateException("O rendimento de " + mesAtual.format(FORMATO_MES)
-                    + " já foi aplicado a esta conta.");
+            throw new IllegalStateException("Interest for " + mesAtual.format(FORMATO_MES)
+                    + " has already been applied to this account.");
         }
 
         BigDecimal rendimento = getSaldo()
@@ -72,6 +72,6 @@ public final class ContaPoupanca extends Conta {
 
     @Override
     public String getTipoConta() {
-        return "Conta Poupança";
+        return "Savings Account";
     }
 }

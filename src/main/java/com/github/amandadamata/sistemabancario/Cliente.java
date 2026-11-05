@@ -14,10 +14,10 @@ public final class Cliente {
 
     public Cliente(String nome, Cpf cpf) {
         if (nome == null || nome.isBlank()) {
-            throw new IllegalArgumentException("O nome do cliente é obrigatório.");
+            throw new IllegalArgumentException("The account holder's name is required.");
         }
         this.nome = nome.trim();
-        this.cpf = Objects.requireNonNull(cpf, "O CPF é obrigatório.");
+        this.cpf = Objects.requireNonNull(cpf, "The CPF is required.");
     }
 
     public String getNome() {

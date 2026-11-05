@@ -10,19 +10,19 @@ final class PainelResumo extends JPanel {
         super(new BorderLayout(0, 18));
         setOpaque(false);
         JPanel topo = Componentes.coluna();
-        Componentes.adicionar(topo, Componentes.texto("Sua conta, com clareza.", 27, true), 18);
+        Componentes.adicionar(topo, Componentes.texto("Your account at a glance.", 27, true), 18);
         JPanel saldo = Componentes.coluna();
         saldo.setOpaque(true);
         saldo.setBackground(Color.WHITE);
         saldo.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Tema.BORDA),
                 BorderFactory.createEmptyBorder(20, 24, 20, 24)));
-        Componentes.adicionar(saldo, Componentes.texto("Saldo em conta", 14, false), 8);
+        Componentes.adicionar(saldo, Componentes.texto("Balance", 14, false), 8);
         JLabel valor = Componentes.texto(Moeda.formatar(conta.getSaldo()), 38, true);
         valor.setName("saldo");
         Componentes.adicionar(saldo, valor, 12);
-        String detalhe = "Disponível para usar: " + Moeda.formatar(conta.getSaldoDisponivel());
+        String detalhe = "Available to use: " + Moeda.formatar(conta.getSaldoDisponivel());
         if (conta instanceof ContaCorrente corrente) {
-            detalhe += "  •  Inclui limite de " + Moeda.formatar(corrente.getLimiteChequeEspecial());
+            detalhe += "  •  Includes a limit of " + Moeda.formatar(corrente.getLimiteChequeEspecial());
         }
         Componentes.adicionar(saldo, Componentes.explicacao(detalhe), 0);
         Componentes.adicionar(topo, saldo, 18);
@@ -41,10 +41,10 @@ final class PainelResumo extends JPanel {
         add(new PainelHistorico(conta, false), BorderLayout.CENTER);
         JPanel rodape = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         rodape.setOpaque(false);
-        rodape.add(Componentes.botao("Ver todas as movimentações", extrato));
+        rodape.add(Componentes.botao("View all transactions", extrato));
         if (conta instanceof ContaPoupanca) {
             rodape.add(Box.createHorizontalStrut(12));
-            rodape.add(Componentes.botao("Rendimento mensal", rendimento));
+            rodape.add(Componentes.botao("Monthly interest", rendimento));
         }
         add(rodape, BorderLayout.SOUTH);
     }

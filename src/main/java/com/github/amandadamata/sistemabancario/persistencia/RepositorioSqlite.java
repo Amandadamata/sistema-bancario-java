@@ -76,7 +76,7 @@ public final class RepositorioSqlite implements RepositorioBanco {
      *                                    mais nova que a aplicação
      */
     public RepositorioSqlite(Path arquivo) {
-        this.arquivo = Objects.requireNonNull(arquivo, "O arquivo do banco de dados é obrigatório.");
+        this.arquivo = Objects.requireNonNull(arquivo, "The database file is required.");
         prepararArquivo();
     }
 
@@ -109,7 +109,7 @@ public final class RepositorioSqlite implements RepositorioBanco {
             return contas;
         } catch (SQLException | RuntimeException falha) {
             throw new FalhaPersistenciaException(
-                    "Não foi possível ler os dados de " + arquivo + ". O arquivo não foi alterado.", falha);
+                    "Could not read the data from " + arquivo + ". The file was not changed.", falha);
         }
     }
 
@@ -135,7 +135,7 @@ public final class RepositorioSqlite implements RepositorioBanco {
                 throw falha;
             }
         } catch (SQLException | RuntimeException falha) {
-            throw new FalhaPersistenciaException("Não foi possível gravar os dados em " + arquivo + ".", falha);
+            throw new FalhaPersistenciaException("Could not save the data to " + arquivo + ".", falha);
         }
     }
 
@@ -146,7 +146,7 @@ public final class RepositorioSqlite implements RepositorioBanco {
                 Files.createDirectories(pasta);
             }
         } catch (IOException falha) {
-            throw new FalhaPersistenciaException("Não foi possível criar a pasta de " + arquivo + ".", falha);
+            throw new FalhaPersistenciaException("Could not create the folder for " + arquivo + ".", falha);
         }
         try (Connection conexao = abrirConexao(); Statement comando = conexao.createStatement()) {
             int versao;
@@ -156,12 +156,12 @@ public final class RepositorioSqlite implements RepositorioBanco {
             if (versao == 0) {
                 criarEsquema(conexao);
             } else if (versao > VERSAO_ESQUEMA) {
-                throw new FalhaPersistenciaException("O arquivo " + arquivo + " foi criado por uma versão"
-                        + " mais nova da aplicação (esquema " + versao + "). Ele não foi alterado.");
+                throw new FalhaPersistenciaException("The file " + arquivo + " was created by a newer"
+                        + " version of the application (schema " + versao + "). It was not changed.");
             }
         } catch (SQLException falha) {
-            throw new FalhaPersistenciaException("Não foi possível abrir o banco de dados " + arquivo
-                    + ". Verifique se o caminho existe e se há permissão de leitura e escrita.", falha);
+            throw new FalhaPersistenciaException("Could not open the database " + arquivo
+                    + ". Check that the path exists and that you have read and write permission.", falha);
         }
     }
 

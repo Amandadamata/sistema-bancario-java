@@ -19,7 +19,7 @@ public final class DesktopMain {
             return;
         }
         if (GraphicsEnvironment.isHeadless()) {
-            System.err.println("O Linha precisa de um ambiente gráfico para abrir a janela.");
+            System.err.println("Linha needs a graphical environment to open the window.");
             return;
         }
         System.setProperty("apple.awt.application.name", "Linha");
@@ -40,13 +40,13 @@ public final class DesktopMain {
             if (trava != null) liberar(trava);
             SwingUtilities.invokeLater(() -> {
                 Tema.instalar();
-                JTextArea mensagem = new JTextArea("Não foi possível abrir os dados.\n" + falha.getMessage());
+                JTextArea mensagem = new JTextArea("Could not open the data.\n" + falha.getMessage());
                 mensagem.setEditable(false);
                 mensagem.setLineWrap(true);
                 mensagem.setWrapStyleWord(true);
                 mensagem.setColumns(46);
                 mensagem.setRows(5);
-                JOptionPane.showMessageDialog(null, mensagem, "Linha · Não foi possível iniciar", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(null, mensagem, "Linha · Could not start", JOptionPane.ERROR_MESSAGE);
             });
         }
     }
@@ -57,6 +57,6 @@ public final class DesktopMain {
 
     private static void liberar(ArquivoAplicacao arquivo) {
         try { arquivo.close(); }
-        catch (IOException falha) { System.err.println("Não foi possível liberar a reserva do arquivo."); }
+        catch (IOException falha) { System.err.println("Could not release the file lock."); }
     }
 }

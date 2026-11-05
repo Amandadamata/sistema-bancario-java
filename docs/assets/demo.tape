@@ -17,7 +17,7 @@ Type "export PS1='$ ' SISTEMA_BANCARIO_DB=/tmp/banco-demo.db && rm -f /tmp/banco
 Sleep 500ms
 Show
 
-Type "java -jar target/sistema-bancario-java-1.2.0.jar --terminal" Sleep 500ms Enter
+Type "java -jar target/sistema-bancario-java-1.3.0.jar --terminal" Sleep 500ms Enter
 Sleep 2s
 # Open a checking account with an R$ 200 overdraft limit
 Type "1" Enter Sleep 500ms
@@ -34,7 +34,7 @@ Type "2" Enter Sleep 1.8s
 # Deposit
 Type "2" Enter Sleep 400ms
 Type "1000" Enter Sleep 300ms
-Type "100,00" Enter Sleep 1.8s
+Type "100.00" Enter Sleep 1.8s
 # Withdraw more than the balance: the overdraft covers it
 Type "3" Enter Sleep 400ms
 Type "1000" Enter Sleep 300ms
@@ -54,7 +54,7 @@ Type "1000" Enter Sleep 5s
 # Quit, reopen on the same file: the data is still there
 Type "0" Enter Sleep 1.2s
 Type "clear" Enter Sleep 300ms
-Type "java -jar target/sistema-bancario-java-1.2.0.jar --terminal" Sleep 400ms Enter
+Type "java -jar target/sistema-bancario-java-1.3.0.jar --terminal" Sleep 400ms Enter
 Sleep 1.8s
 Type "6" Enter Sleep 4s
 Type "0" Enter Sleep 2s

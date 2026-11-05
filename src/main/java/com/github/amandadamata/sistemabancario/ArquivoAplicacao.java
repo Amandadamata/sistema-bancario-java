@@ -33,11 +33,11 @@ final class ArquivoAplicacao implements AutoCloseable {
             obtida = canal.tryLock();
         } catch (IOException | OverlappingFileLockException falha) {
             canal.close();
-            throw new IOException("Não foi possível reservar o arquivo. Verifique se o Linha já está aberto.", falha);
+            throw new IOException("Could not lock the file. Check whether Linha is already open.", falha);
         }
         if (obtida == null) {
             canal.close();
-            throw new IOException("O Linha já está usando este arquivo. Feche a outra janela antes de continuar.");
+            throw new IOException("Linha is already using this file. Close the other window first.");
         }
         trava = obtida;
     }
