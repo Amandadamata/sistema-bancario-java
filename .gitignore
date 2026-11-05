@@ -16,3 +16,7 @@ dados/
 *.db-journal
 *.db-wal
 *.db-shm
+
+# Desktop packaging and process lock
+dist/
+*.db.lock

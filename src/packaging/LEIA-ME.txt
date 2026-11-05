@@ -1,0 +1,28 @@
+LINHA — SISTEMA BANCÁRIO (PROJETO EDUCACIONAL)
+
+Requer Java 17 ou superior. As operações alteram apenas saldos locais fictícios;
+nenhum dinheiro real é movimentado.
+
+Abrir a interface gráfica (no terminal, nesta pasta):
+  java -jar Linha.jar
+
+Abrir o menu no terminal:
+  java -jar Linha.jar --terminal
+
+Onde ficam os dados:
+  Interface no macOS:  ~/Library/Application Support/Linha/sistema-bancario.db
+  Interface em outros: ~/.linha/sistema-bancario.db
+  Menu no terminal:    dados/sistema-bancario.db (relativo à pasta atual)
+
+O pacote não traz contas prontas. Use apenas dados de teste; este CPF sintético
+passa na validação e serve para explorar o projeto: 246.813.579-28.
+Não há login nem criptografia.
+
+Roteiro rápido:
+  1. Abra uma conta corrente com limite zero.
+  2. Deposite 100,50.
+  3. Tente sacar 101,00: a operação é recusada.
+  4. Abra outra conta, transfira 20,00 e confira os dois extratos.
+  5. Feche, abra de novo e veja que tudo continua salvo.
+
+Código e documentação: https://github.com/Amandadamata/sistema-bancario-java
