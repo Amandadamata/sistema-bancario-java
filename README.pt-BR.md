@@ -216,7 +216,7 @@ O que ainda não faz:
 
 Próximos passos que estou planejando:
 
-- Expor as contas por uma API REST com Spring Boot, que estou estudando agora.
+- Expor as contas por uma API REST com Spring Boot, com os mesmos padrões da minha [Ticket Booking API](https://github.com/Amandadamata/ticket-booking-api) (updates atômicos em SQL, pedidos idempotentes e erros no padrão RFC 9457).
 - Encerramento de conta, com regras para o saldo que sobrar.
 - Exportação do extrato e paginação para históricos maiores.
 

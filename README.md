@@ -218,7 +218,7 @@ What it doesn't do yet:
 
 Next steps I'm planning:
 
-- Expose the accounts through a REST API with Spring Boot, which I'm studying now.
+- Expose the accounts through a REST API with Spring Boot, using the same patterns as my [Ticket Booking API](https://github.com/Amandadamata/ticket-booking-api) (atomic SQL updates, idempotent requests, RFC 9457 errors).
 - Account closing, with rules for any balance left.
 - Statement export and pagination for longer histories.
 
