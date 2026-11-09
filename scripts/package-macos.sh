@@ -10,15 +10,15 @@ if [ -e dist/Linha.app ]; then
   echo 'dist/Linha.app already exists. Move the previous version before building another.' >&2
   exit 1
 fi
-VERSION=1.3.0
-JAR="sistema-bancario-java-$VERSION.jar"
+VERSION=1.4.0
+JAR="linha-banking-system-$VERSION.jar"
 
 ./mvnw --batch-mode clean verify
 mkdir -p target/jpackage-input dist
 cp "target/$JAR" target/jpackage-input/
 jpackage --type app-image --name Linha --app-version "$VERSION" \
   --input target/jpackage-input --main-jar "$JAR" \
-  --main-class com.github.amandadamata.sistemabancario.DesktopMain \
+  --main-class com.github.amandadamata.bankingsystem.DesktopMain \
   --mac-package-identifier com.github.amandadamata.linha \
   --icon src/packaging/macos/Linha.icns \
   --java-options '--enable-native-access=ALL-UNNAMED' \

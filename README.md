@@ -5,7 +5,7 @@
 [![Java CI](https://github.com/Amandadamata/sistema-bancario-java/actions/workflows/ci.yml/badge.svg)](https://github.com/Amandadamata/sistema-bancario-java/actions/workflows/ci.yml)
 ![Java 17](https://img.shields.io/badge/Java-17-A8D5BA?style=flat-square&logo=openjdk&logoColor=white&labelColor=1B4332)
 ![Swing](https://img.shields.io/badge/Swing-FlatLaf-A8D5BA?style=flat-square&labelColor=1B4332)
-![JUnit 6](https://img.shields.io/badge/JUnit%206-151%20tests-A8D5BA?style=flat-square&logo=junit5&logoColor=white&labelColor=1B4332)
+![JUnit 6](https://img.shields.io/badge/JUnit%206-153%20tests-A8D5BA?style=flat-square&logo=junit5&logoColor=white&labelColor=1B4332)
 ![SQLite](https://img.shields.io/badge/SQLite-JDBC-A8D5BA?style=flat-square&logo=sqlite&logoColor=white&labelColor=1B4332)
 [![License: MIT](https://img.shields.io/badge/license-MIT-A8D5BA?style=flat-square&labelColor=1B4332)](LICENSE)
 
@@ -21,7 +21,7 @@ A checking account can go into overdraft up to a limit. A savings account can't,
 
 This app models those rules in plain Java. You open accounts, deposit, withdraw, transfer and check a statement, in a window or in the terminal. Amounts use `BigDecimal`, so every cent is exact. Each operation is saved to a SQLite file in a single SQL transaction: either everything is stored, or nothing is, and the account in memory goes back to how it was.
 
-Adding the desktop interface didn't change any of the original domain, persistence or menu classes. Both interfaces call `Banco`, and no financial class imports Swing.
+Adding the desktop interface didn't change any of the original domain, persistence or menu classes. Both interfaces call `Bank`, and no financial class imports Swing.
 
 ## Demo
 
@@ -29,7 +29,7 @@ Adding the desktop interface didn't change any of the original domain, persisten
 
 ![Desktop demo: opening accounts, a rejected CPF, deposit, overdraft, monthly interest, transfer and reopening the app with the data intact](docs/assets/demo-interface.gif)
 
-*The window, clicks and data are real, on a temporary SQLite file. Frames are painted by the Swing components themselves; the title bar, pointer and captions are drawn by [the recording script](scripts/demo/GravarDemoInterface.java).*
+*The window, clicks and data are real, on a temporary SQLite file. Frames are painted by the Swing components themselves; the title bar, pointer and captions are drawn by [the recording script](scripts/demo/RecordInterfaceDemo.java).*
 
 ### Terminal
 
@@ -52,16 +52,16 @@ Adding the desktop interface didn't change any of the original domain, persisten
 
 | Skill | Where / how it shows up |
 |---|---|
-| Abstraction | `Conta` is an `abstract` class that holds the balance, the statement and the shared rules. `RepositorioBanco` is an interface, so `Banco` doesn't know SQLite exists. |
-| Inheritance | `ContaCorrente` and `ContaPoupanca` extend `Conta`. The savings account adds `aplicarRendimento()`, which remembers the last month it paid interest. |
-| Polymorphism | `ContaCorrente` overrides `calcularSaldoDisponivel()` to add the overdraft limit. `Conta` checks the available balance without asking which type of account it is. |
-| Encapsulation | There's no `setSaldo`. The balance only changes through operations that also write a statement line, and `getHistorico()` returns a copy with `List.copyOf`. |
-| Separated layers | Two interfaces share one domain. The `ui` package only reaches accounts through `Banco`, and the desktop app was added without editing a single financial rule. |
-| Concurrency in a GUI | `TarefasUi` runs each save in a `SwingWorker`, off the event thread, one at a time. Controls stay disabled and closing the window waits until it finishes. |
-| Custom exceptions | `SaldoInsuficienteException` is thrown by `Conta` when a withdrawal or transfer goes over the available balance. `FalhaPersistenciaException` reports a failed save. |
-| SQL and transactions | `RepositorioSqlite` turns off auto-commit, saves every account involved, then calls `commit()` or `rollback()`. Queries use `PreparedStatement`, and foreign keys are switched on. |
-| Parameterized tests | 13 `@ParameterizedTest` methods. For example, `ContaTest` sends `0`, `-10.00`, `0.001`, `10.005` and `null` to every operation and checks that all are refused and no balance changes. |
-| Automated tests and CI | 151 JUnit 6 tests in 13 classes, including a real SQLite file and real Swing windows. [`ci.yml`](.github/workflows/ci.yml) runs them on Java 17, 21 and 25 (the Swing flows on 17, on a virtual display) and starts the packaged JAR. |
+| Abstraction | `Account` is an `abstract` class that holds the balance, the statement and the shared rules. `BankRepository` is an interface, so `Bank` doesn't know SQLite exists. |
+| Inheritance | `CheckingAccount` and `SavingsAccount` extend `Account`. The savings account adds `applyInterest()`, which remembers the last month it paid interest. |
+| Polymorphism | `CheckingAccount` overrides `calculateAvailableBalance()` to add the overdraft limit. `Account` checks the available balance without asking which type of account it is. |
+| Encapsulation | There's no `setBalance`. The balance only changes through operations that also write a statement line, and `getHistory()` returns a copy with `List.copyOf`. |
+| Separated layers | Two interfaces share one domain. The `ui` package only reaches accounts through `Bank`, and the desktop app was added without editing a single financial rule. |
+| Concurrency in a GUI | `UiTasks` runs each save in a `SwingWorker`, off the event thread, one at a time. Controls stay disabled and closing the window waits until it finishes. |
+| Custom exceptions | `InsufficientFundsException` is thrown by `Account` when a withdrawal or transfer goes over the available balance. `PersistenceFailureException` reports a failed save. |
+| SQL and transactions | `SqliteRepository` turns off auto-commit, saves every account involved, then calls `commit()` or `rollback()`. Queries use `PreparedStatement`, and foreign keys are switched on. |
+| Parameterized tests | 13 `@ParameterizedTest` methods. For example, `AccountTest` sends `0`, `-10.00`, `0.001`, `10.005` and `null` to every operation and checks that all are refused and no balance changes. |
+| Automated tests and CI | 153 JUnit 6 tests in 13 classes, including a real SQLite file and real Swing windows. [`ci.yml`](.github/workflows/ci.yml) runs them on Java 17, 21 and 25 (the Swing flows on 17, on a virtual display) and starts the packaged JAR. |
 
 ## How it works
 
@@ -69,45 +69,45 @@ Adding the desktop interface didn't change any of the original domain, persisten
 %%{init: {'theme':'base','themeVariables':{'primaryColor':'#D8F3DC','primaryTextColor':'#1B4332','primaryBorderColor':'#2D6A4F','lineColor':'#2D6A4F','secondaryColor':'#A8D5BA','tertiaryColor':'#FFFFFF'}}}%%
 classDiagram
     direction LR
-    class JanelaBanco {
+    class BankWindow {
       Swing window
     }
     class Main {
       terminal menu
     }
-    class Banco {
-      +depositar()
-      +sacar()
-      +transferir()
-      +aplicarRendimento()
+    class Bank {
+      +deposit()
+      +withdraw()
+      +transfer()
+      +applyInterest()
     }
-    class Conta {
+    class Account {
       <<abstract>>
-      -saldo : BigDecimal
-      -historico : List~Transacao~
-      #calcularSaldoDisponivel()
+      -balance : BigDecimal
+      -history : List~Transaction~
+      #calculateAvailableBalance()
     }
-    class ContaCorrente {
-      -limiteChequeEspecial
-      #calcularSaldoDisponivel()
+    class CheckingAccount {
+      -overdraftLimit
+      #calculateAvailableBalance()
     }
-    class ContaPoupanca {
-      -ultimoMesComRendimento
-      ~aplicarRendimento()
+    class SavingsAccount {
+      -lastInterestMonth
+      ~applyInterest()
     }
-    class RepositorioBanco {
+    class BankRepository {
       <<interface>>
     }
-    JanelaBanco --> Banco
-    Main --> Banco
-    Banco --> Conta
-    Conta <|-- ContaCorrente
-    Conta <|-- ContaPoupanca
-    Banco --> RepositorioBanco
-    RepositorioBanco <|.. RepositorioSqlite
+    BankWindow --> Bank
+    Main --> Bank
+    Bank --> Account
+    Account <|-- CheckingAccount
+    Account <|-- SavingsAccount
+    Bank --> BankRepository
+    BankRepository <|.. SqliteRepository
 ```
 
-Every action goes through `Banco`, which follows the same three steps each time. First it takes a snapshot of the accounts involved. Then it asks the account to apply the rule: `Conta` checks the amount, asks `calcularSaldoDisponivel()` how much can be spent, and throws `SaldoInsuficienteException` if it's not enough. Last, it saves everything in one SQL transaction, and if the save fails, the accounts go back to the snapshot. When the app starts, it replays each statement and checks that it adds up to the stored balance.
+Every action goes through `Bank`, which follows the same three steps each time. First it takes a snapshot of the accounts involved. Then it asks the account to apply the rule: `Account` checks the amount, asks `calculateAvailableBalance()` how much can be spent, and throws `InsufficientFundsException` if it's not enough. Last, it saves everything in one SQL transaction, and if the save fails, the accounts go back to the snapshot. When the app starts, it replays each statement and checks that it adds up to the stored balance.
 
 More in [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -115,7 +115,7 @@ More in [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 - **I chose `BigDecimal` instead of `double`** because `double` can't store most decimal values exactly. In the database, money is stored as whole cents (`INTEGER`) for the same reason.
 - **I chose SQLite instead of a database server** because it's a single file with real SQL and transactions, and nothing extra to install to run the project.
-- **I chose to make the overdraft an override instead of an `if` on the account type.** Adding a new kind of account means writing a new class, not editing the rules in `Conta`.
+- **I chose to make the overdraft an override instead of an `if` on the account type.** Adding a new kind of account means writing a new class, not editing the rules in `Account`.
 - **I chose a checked exception for insufficient balance** because it's an expected situation, and the compiler forces each interface to handle it with a clear message.
 - **I chose Swing with FlatLaf instead of a web front end** because it ships in one JAR with the existing Java classes, with no server or browser involved.
 
@@ -145,13 +145,13 @@ cd sistema-bancario-java
 Open the desktop app:
 
 ```bash
-java -jar target/sistema-bancario-java-1.3.0.jar
+java -jar target/linha-banking-system-1.4.0.jar
 ```
 
 Open the terminal menu:
 
 ```bash
-java -jar target/sistema-bancario-java-1.3.0.jar --terminal
+java -jar target/linha-banking-system-1.4.0.jar --terminal
 ```
 
 On Windows, use `mvnw.cmd`. In IntelliJ IDEA, open the `pom.xml`, choose a JDK 17 or newer, and run `DesktopMain` (window) or `Main` (terminal).
@@ -162,17 +162,17 @@ To explore, use made-up data. This synthetic CPF passes the validation: `246.813
 
 | Interface | Default file |
 |---|---|
-| Desktop on macOS | `~/Library/Application Support/Linha/sistema-bancario.db` |
-| Desktop on other systems | `~/.linha/sistema-bancario.db` |
-| Terminal | `dados/sistema-bancario.db`, relative to the current folder |
+| Desktop on macOS | `~/Library/Application Support/Linha/linha.db` |
+| Desktop on other systems | `~/.linha/linha.db` |
+| Terminal | `data/linha.db`, relative to the current folder |
 
-To use another file, set `SISTEMA_BANCARIO_DB=/tmp/bank-demo.db`. The `.db.lock` file next to the database stops a second desktop window from opening the same data, and it's normal for it to stay there after closing.
+To use another file, set `LINHA_DB=/tmp/bank-demo.db`. Files from version 1.3 or earlier (`sistema-bancario.db`, with Portuguese table names) keep opening: the app upgrades them to the current schema the first time, in a single transaction. The `.db.lock` file next to the database stops a second desktop window from opening the same data, and it's normal for it to stay there after closing.
 
 ### Tests
 
 ```bash
 ./mvnw test                # domain, SQLite and presentation; skips the 8 Swing flows
-./mvnw -Pui-tests verify   # all 151 tests; needs a graphical session
+./mvnw -Pui-tests verify   # all 153 tests; needs a graphical session
 ```
 
 On Linux without a display: `xvfb-run -a ./mvnw -Pui-tests verify`. More in [TESTING.md](docs/TESTING.md).
@@ -181,27 +181,27 @@ On Linux without a display: `xvfb-run -a ./mvnw -Pui-tests verify`. More in [TES
 
 - `./scripts/package-macos.sh` builds `Linha.app` with `jpackage`, plus both ZIPs, on a Mac.
 - `vhs docs/assets/demo.tape` records the terminal demo, using [VHS](https://github.com/charmbracelet/vhs).
-- [`GravarDemoInterface.java`](scripts/demo/GravarDemoInterface.java) records the desktop demo.
+- [`RecordInterfaceDemo.java`](scripts/demo/RecordInterfaceDemo.java) records the desktop demo.
 
 ## Project structure
 
 ```text
-src/main/java/com/github/amandadamata/sistemabancario/
-├── DesktopMain.java            # JAR entry point: opens the window, or the menu with --terminal
-├── ArquivoAplicacao.java       # stable data path and lock between desktop instances
-├── Banco.java                  # entry point for every operation; snapshot, apply, save or undo
-├── Conta.java                  # abstract account: balance, statement, shared rules
-├── ContaCorrente.java          # overdraft
-├── ContaPoupanca.java          # monthly interest
-├── Cliente.java, Cpf.java      # account holder and CPF validation
-├── Moeda.java, Transacao.java  # money parsing/formatting and statement entries
-├── RepositorioBanco.java       # storage contract
-├── persistencia/RepositorioSqlite.java  # JDBC + SQL transactions
-├── ui/                         # window, screens, theme and background tasks
-└── Main.java                   # console menu only
-src/test/                       # 151 tests: unit, SQLite integration, menu sessions and Swing flows
-scripts/                        # macOS packaging and demo recording
-docs/                           # architecture, design decisions, testing, evolution notes
+src/main/java/com/github/amandadamata/bankingsystem/
+├── DesktopMain.java                    # JAR entry point: opens the window, or the menu with --terminal
+├── AppDataFile.java                    # stable data path and lock between desktop instances
+├── Bank.java                           # entry point for every operation; snapshot, apply, save or undo
+├── Account.java                        # abstract account: balance, statement, shared rules
+├── CheckingAccount.java                # overdraft
+├── SavingsAccount.java                 # monthly interest
+├── Customer.java, Cpf.java             # account holder and CPF validation
+├── Money.java, Transaction.java        # money parsing/formatting and statement entries
+├── BankRepository.java                 # storage contract
+├── persistence/SqliteRepository.java   # JDBC + SQL transactions
+├── ui/                                 # window, screens, theme and background tasks
+└── Main.java                           # console menu only
+src/test/                               # 153 tests: unit, SQLite integration, menu sessions and Swing flows
+scripts/                                # macOS packaging and demo recording
+docs/                                   # architecture, design decisions, testing, evolution notes
 ```
 
 The app itself is in English. Class and method names are still in Portuguese, from when this started as a study project in Brazil.
@@ -218,10 +218,9 @@ What it doesn't do yet:
 
 Next steps I'm planning:
 
-- Expose the accounts through a REST API with Spring Boot, which I'm studying now.
+- Expose the accounts through a REST API with Spring Boot, using the same patterns as my [Ticket Booking API](https://github.com/Amandadamata/ticket-booking-api) (atomic SQL updates, idempotent requests, RFC 9457 errors).
 - Account closing, with rules for any balance left.
 - Statement export and pagination for longer histories.
-- Schema migrations (the version is already stored in `PRAGMA user_version`).
 
 ## Author
 
