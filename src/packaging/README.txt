@@ -10,9 +10,9 @@ Open the terminal menu:
   java -jar Linha.jar --terminal
 
 Where the data goes:
-  Desktop on macOS:  ~/Library/Application Support/Linha/sistema-bancario.db
-  Desktop elsewhere: ~/.linha/sistema-bancario.db
-  Terminal menu:     dados/sistema-bancario.db (relative to the current folder)
+  Desktop on macOS:  ~/Library/Application Support/Linha/linha.db
+  Desktop elsewhere: ~/.linha/linha.db
+  Terminal menu:     data/linha.db (relative to the current folder)
 
 The package has no accounts in it. Use test data only. CPF is Brazil's tax ID;
 this synthetic one passes the validation: 246.813.579-28.

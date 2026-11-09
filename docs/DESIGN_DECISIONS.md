@@ -10,37 +10,37 @@ verified.
   first version of this project, depositing 0.10 and 0.70 and withdrawing 0.80 was refused because
   the balance was `0.7999999999999999`.
 - **Alternatives:** `long` cents everywhere; `double` with rounding on display (hides the error).
-- **Verified by:** `ContaTest.somaDeCentavosEExata`.
+- **Verified by:** `AccountTest.sumOfCentsIsExact`.
 
 ## 2. Reject amounts with more than two decimal places
 
 - **Decision:** `10.005` is rejected instead of rounded.
 - **Why:** an amount typed by a person should be exactly what is moved.
-- **Verified by:** `ContaTest.operacoesComValorInvalidoSaoRecusadasSemAlterarSaldos`, `MoedaTest`.
+- **Verified by:** `AccountTest.invalidAmountsAreRejectedWithoutChangingBalances`, `MoneyTest`.
 
 ## 3. Banker's rounding (`HALF_EVEN`) for calculated values
 
 - **Decision:** the yield is rounded to cents with `HALF_EVEN` (5.025 → 5.02, 0.505 → 0.50).
 - **Why:** avoids a systematic upward bias on ties.
-- **Verified by:** `ContaPoupancaTest.empateNoArredondamentoVaiParaOCentavoPar`.
+- **Verified by:** `SavingsAccountTest.roundingTiesGoToTheEvenCent`.
 
 ## 4. Inheritance for account types
 
-- **Decision:** `ContaCorrente` and `ContaPoupanca` extend the abstract `Conta`; the checking account
-  overrides `calcularSaldoDisponivel()`.
-- **Alternative:** one `Conta` with a pluggable spending policy (composition), better if account
+- **Decision:** `CheckingAccount` and `SavingsAccount` extend the abstract `Account`; the checking account
+  overrides `calculateAvailableBalance()`.
+- **Alternative:** one `Account` with a pluggable spending policy (composition), better if account
   types multiplied.
-- **Verified by:** `ContaTest.contaCorrentePermiteUsarChequeEspecialAteOLimite`.
+- **Verified by:** `AccountTest.checkingAccountCanUseOverdraftUpToTheLimit`.
 
 ## 5. Checked exception for insufficient funds
 
-- **Decision:** `SaldoInsuficienteException` is checked; invalid arguments use unchecked exceptions.
+- **Decision:** `InsufficientFundsException` is checked; invalid arguments use unchecked exceptions.
 - **Why:** insufficient funds is an expected outcome every caller must handle.
 
 ## 6. Validate everything before changing state
 
 - **Decision:** operations check all rules before touching a balance.
-- **Verified by:** `ContaTest.transferenciaSemSaldoNaoAlteraNenhumaConta`.
+- **Verified by:** `AccountTest.transferWithoutFundsChangesNoAccount`.
 
 ## 7. SQLite with JDBC for persistence
 
@@ -58,36 +58,36 @@ verified.
   - *JPA/Hibernate*: hides the SQL this project wants to show and adds configuration.
 - **Costs:** the JAR grows to about 12 MB because the driver bundles native libraries for each
   operating system; the driver loads native code (a manifest entry avoids the JDK 24+ warning).
-- **Verified by:** `RepositorioSqliteTest`, `MainTest.dadosSobrevivemAoReinicioDoPrograma`.
+- **Verified by:** `SqliteRepositoryTest`, `MainTest.dataSurvivesARestart`.
 
 ## 8. Integer cents in the database
 
 - **Decision:** money columns are `INTEGER` cents.
 - **Why:** SQLite `REAL` is binary floating point and would bring back the rounding errors removed in
-  decision 1. SQLite has no exact decimal type. Integers are exact and allow `CHECK (valor > 0)`.
+  decision 1. SQLite has no exact decimal type. Integers are exact and allow `CHECK (amount > 0)`.
 - **Alternative:** `TEXT` with the decimal string; exact, but SQL comparisons and sums would be
   textual.
-- **Verified by:** `RepositorioSqliteTest.valoresSaoGravadosComoCentavosInteiros`,
-  `conversaoDeCentavosEExataEmAmbosOsSentidos`.
+- **Verified by:** `SqliteRepositoryTest.amountsAreStoredAsWholeCents`,
+  `centsConversionIsExactBothWays`.
 
-## 9. `Banco` as the single entry point, with capture → apply → save or undo
+## 9. `Bank` as the single entry point, with capture → apply → save or undo
 
-- **Decision:** operations that change balances are package-private on `Conta`; `Main` calls `Banco`.
-  `Banco` captures the state of the accounts involved (`EstadoConta`, a *memento*), applies the rule,
+- **Decision:** operations that change balances are package-private on `Account`; `Main` calls `Bank`.
+  `Bank` captures the state of the accounts involved (`AccountState`, a *memento*), applies the rule,
   saves all of them in one repository call, and restores the captured state if saving fails.
 - **Why:** without this, memory could show a deposit that was never saved. Restoring from the
   captured state does not depend on the database being readable at that moment.
 - **Alternatives:** reload everything from the database after a failure (fails if the database is
-  unavailable); save each change from inside `Conta` (couples the domain to storage).
-- **Verified by:** `BancoPersistenciaTest.falhaAoGravarDepositoDesfazAAlteracaoNaMemoria`,
-  `falhaAoGravarTransferenciaDesfazAsDuasContas`, `falhaAoGravarRendimentoNaoConsomeOMes`.
+  unavailable); save each change from inside `Account` (couples the domain to storage).
+- **Verified by:** `BankPersistenceTest.failedDepositSaveUndoesTheChangeInMemory`,
+  `failedTransferSaveUndoesBothAccounts`, `failedInterestSaveKeepsTheMonthAvailable`.
 
 ## 10. One SQL transaction per operation
 
-- **Decision:** `RepositorioSqlite.salvar` disables auto-commit, writes every account involved, and
+- **Decision:** `SqliteRepository.save` disables auto-commit, writes every account involved, and
   commits; any error triggers a rollback.
 - **Why:** a transfer must be stored on both sides or on neither.
-- **Verified by:** `RepositorioSqliteTest.transferenciaInterrompidaNoMeioDaGravacaoNaoDeixaNenhumLadoGravado`.
+- **Verified by:** `SqliteRepositoryTest.transferInterruptedMidSaveLeavesNeitherSideSaved`.
   A database trigger rejects the destination entry after the origin was already written in the same
   transaction. With the transaction removed, this test fails: the reload finds a half-written
   transfer.
@@ -95,24 +95,26 @@ verified.
 ## 11. Append-only statement rows and integrity check on load
 
 - **Decision:** statement rows have a sequence number per account and are only inserted, never
-  updated. On load, `Conta.restaurarHistorico` replays every entry and compares it with the stored
+  updated. On load, `Account.restoreHistory` replays every entry and compares it with the stored
   balances.
 - **Why:** the statement is the source of truth for the balance; any divergence means the file was
   damaged or edited outside the application, and using it could create money.
-- **Verified by:** `RepositorioSqliteTest.saldoAlteradoForaDaAplicacaoEDetectadoAoCarregar`,
-  `BancoPersistenciaTest.carregarRecusaSaldoQueNaoCorrespondeAoHistorico`.
+- **Verified by:** `SqliteRepositoryTest.balanceChangedOutsideTheAppIsDetectedOnLoad`,
+  `BankPersistenceTest.loadRejectsABalanceThatDoesNotMatchTheHistory`.
 
 ## 12. Schema version and refusing newer files
 
 - **Decision:** `PRAGMA user_version` stores the schema version. A newer version is refused without
   changes.
-- **Why:** an older program must not misread or overwrite data written by a newer one. Future schema
-  changes can be migrations from one version to the next.
-- **Verified by:** `RepositorioSqliteTest.esquemaDeUmaVersaoMaisNovaERecusado`.
+- **Why:** an older program must not misread or overwrite data written by a newer one. Schema changes
+  are migrations from one version to the next: version 1.4.0 moved schema 1 (Portuguese names) to
+  schema 2 (English names) inside the same transaction that creates the new tables.
+- **Verified by:** `SqliteRepositoryTest.schemaFromANewerVersionIsRejected` and
+  `SqliteRepositoryTest.fileFromSchemaVersion1IsMigratedWithoutLosingData`.
 
 ## 13. CPF as a value object with check digits
 
-- **Decision:** `Cpf.de(text)` accepts digits with optional dots, hyphen, and spaces; requires 11
+- **Decision:** `Cpf.of(text)` accepts digits with optional dots, hyphen, and spaces; requires 11
   ASCII digits; rejects sequences of one repeated digit; and checks both check digits (weights 10..2
   and 11..2, remainder rule). It stores the 11 digits; `toString()` is masked.
 - **Why:** invalid documents are rejected at the edge; a value object keeps the rule in one place.
@@ -128,8 +130,8 @@ verified.
 
 - **Decision:** opening an account with a CPF already registered under a different name is refused.
   The same person can have several accounts.
-- **Why:** the `clientes` table uses the CPF as its primary key.
-- **Verified by:** `BancoPersistenciaTest.cpfNaoPodePertencerADoisTitulares`.
+- **Why:** the `customers` table uses the CPF as its primary key.
+- **Verified by:** `BankPersistenceTest.cpfCannotBelongToTwoHolders`.
 
 ## 15. Injected `Clock` and no printing in the domain
 
@@ -145,7 +147,7 @@ verified.
 ## 17. Desktop as a new presentation layer
 
 Swing and FlatLaf add a local graphical interface without changing the original 17 production
-classes. Forms call `Banco`, never perform financial calculations. `SwingWorker` keeps SQLite off
+classes. Forms call `Bank`, never perform financial calculations. `SwingWorker` keeps SQLite off
 the EDT, while a single-operation guard protects the existing non-concurrent model. Layout managers
 and a width-tracking scrollable panel handle window resizing.
 
